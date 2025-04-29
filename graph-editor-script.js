@@ -28,6 +28,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('cancelClearBtn').addEventListener('click', hideClearConfirmModal);
 
+  document.getElementById('saveAndLoadBtn').addEventListener('click', () => {
+    saveGraph();
+    hideLoadConfirmModal();
+    loadGraph();
+  });
+
+  document.getElementById('loadWithoutSaveBtn').addEventListener('click', () => {
+    hideLoadConfirmModal();
+    loadGraph();
+  });
+
+  document.getElementById('cancelLoadBtn').addEventListener('click', hideLoadConfirmModal);
+
   // Add global event listener for node size slider
   document.getElementById('nodeSize').addEventListener('input', () => {
     updateNodeSizePreview();
@@ -195,8 +208,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('loadGraphBtn').addEventListener('click', () => {
     hideGraphError();
-    loadGraph();
+    if (isGraphModified) {
+      showLoadConfirmModal();
+    } else {
+      loadGraph();
+    }
   });
+
   document.getElementById('clearGraphBtn').addEventListener('click', () => {
     if (isGraphModified) {
       showClearConfirmModal();
@@ -872,6 +890,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function hideClearConfirmModal() {
     document.getElementById('clearConfirmModal').style.display = 'none';
+  }
+
+  function showLoadConfirmModal() {
+    document.getElementById('loadConfirmModal').style.display = 'flex';
+  }
+
+  function hideLoadConfirmModal() {
+    document.getElementById('loadConfirmModal').style.display = 'none';
   }
 
   function clearGraph() {
