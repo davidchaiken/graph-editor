@@ -6,6 +6,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Set initial opacity for Delete Node button
   document.getElementById('deleteNodeBtn').style.opacity = '0.5';
+  
+  // Set initial state for Clear button
+  document.getElementById('clearGraphBtn').disabled = true;
+  document.getElementById('clearGraphBtn').style.opacity = '0.5';
+
+  // Track if graph has been modified
+  let isGraphModified = false;
+
+  // Add event listeners for modal buttons
+  document.getElementById('saveAndClearBtn').addEventListener('click', () => {
+    saveGraph();
+    clearGraph();
+    hideClearConfirmModal();
+  });
+
+  document.getElementById('clearWithoutSaveBtn').addEventListener('click', () => {
+    clearGraph();
+    hideClearConfirmModal();
+  });
+
+  document.getElementById('cancelClearBtn').addEventListener('click', hideClearConfirmModal);
 
   // Add global event listener for node size slider
   document.getElementById('nodeSize').addEventListener('input', () => {
@@ -46,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .onNodeDragEnd(node => {
         node.fx = node.x;
         node.fy = node.y;
+        isGraphModified = true;
         Graph.d3Force('center', null); // the user is taking control of the positions of nodes
       })
       .nodeCanvasObject((node, ctx, globalScale) => {
@@ -175,6 +197,13 @@ document.addEventListener('DOMContentLoaded', () => {
     hideGraphError();
     loadGraph();
   });
+  document.getElementById('clearGraphBtn').addEventListener('click', () => {
+    if (isGraphModified) {
+      showClearConfirmModal();
+    } else {
+      clearGraph();
+    }
+  });
 
   // Add keyboard event handler for Delete and Backspace keys
   document.addEventListener('keydown', (event) => {
@@ -216,6 +245,9 @@ document.addEventListener('DOMContentLoaded', () => {
       Graph.graphData(gData);
       Graph.d3ReheatSimulation();
 
+      // Mark graph as modified
+      isGraphModified = true;
+
       // Select the newly created node
       handleNodeClick(newNode);
     }
@@ -242,8 +274,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function applyColor(color) {
     if (selectedNode) {
       selectedNode.color = color;
+      isGraphModified = true;
     } else if (selectedLink) {
       selectedLink.color = color;
+      isGraphModified = true;
     }
     Graph.graphData(gData);
   }
@@ -352,6 +386,9 @@ document.addEventListener('DOMContentLoaded', () => {
     Graph.graphData(gData);
     Graph.d3ReheatSimulation();
 
+    // Mark graph as modified
+    isGraphModified = true;
+
     // Select the newly created node
     handleNodeClick(newNode);
   }
@@ -369,6 +406,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Remove the node
     gData.nodes = gData.nodes.filter(node => node.id !== nodeIdToDelete);
+
+    // Mark graph as modified
+    isGraphModified = true;
+
+    // Disable Clear button if no nodes remain
+    if (gData.nodes.length === 0) {
+      document.getElementById('clearGraphBtn').disabled = true;
+      document.getElementById('clearGraphBtn').style.opacity = '0.5';
+    }
 
     // Clear selection
     selectedNode = null;
@@ -396,6 +442,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Remove the link from the array
     gData.links = gData.links.filter(link => link !== selectedLink);
+
+    // Mark graph as modified
+    isGraphModified = true;
 
     // Check if source node has any remaining links
     const sourceHasLinks = gData.links.some(link => 
@@ -462,6 +511,9 @@ document.addEventListener('DOMContentLoaded', () => {
         gData.links.push(newLink);
         Graph.graphData(gData);
 
+        // Mark graph as modified
+        isGraphModified = true;
+
         // Select the target if shift is held down, otherwise select based on control key
         if (event.shiftKey) {
           handleNodeClick(node);
@@ -490,6 +542,12 @@ document.addEventListener('DOMContentLoaded', () => {
     updateLinkPropertiesUI();
     Graph.graphData(gData);
     Graph.d3Force('center', null); // the user is taking control of the positions of nodes
+
+    // Enable Clear button if this is the first node
+    if (gData.nodes.length === 1) {
+      document.getElementById('clearGraphBtn').disabled = false;
+      document.getElementById('clearGraphBtn').style.opacity = '1';
+    }
   }
 
   function handleNodeRightClick(node) {
@@ -523,6 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
       labelInput.addEventListener('input', () => {
         if (selectedNode) {
           selectedNode.label = labelInput.value;
+          isGraphModified = true;
           Graph.graphData(gData);
         }
       });
@@ -531,6 +590,7 @@ document.addEventListener('DOMContentLoaded', () => {
       sizeInput.addEventListener('input', () => {
         if (selectedNode) {
           selectedNode.size = parseInt(sizeInput.value);
+          isGraphModified = true;
           Graph.graphData(gData);
         }
         updateNodeSizePreview();
@@ -540,15 +600,11 @@ document.addEventListener('DOMContentLoaded', () => {
       updateNodeSizePreview();
     } else {
       labelInput.value = '';
-      sizeInput.value = 5;
       deleteBtn.disabled = true;
       deleteBtn.style.opacity = '0.5';
       
       const newLabelInput = labelInput.cloneNode(true);
-      const newSizeInput = sizeInput.cloneNode(true);
-      
       labelInput.parentNode.replaceChild(newLabelInput, labelInput);
-      sizeInput.parentNode.replaceChild(newSizeInput, sizeInput);
 
       // Update slider background when node is deselected
       updateNodeSizePreview();
@@ -569,6 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
       thicknessInput.addEventListener('input', () => {
         if (selectedLink) {
           selectedLink.thickness = parseInt(thicknessInput.value);
+          isGraphModified = true;
           Graph.graphData(gData);
         }
       });
@@ -609,6 +666,9 @@ document.addEventListener('DOMContentLoaded', () => {
       delete node.fx;
       delete node.fy;
     });
+    
+    // Mark graph as modified
+    isGraphModified = true;
     
     // Restart the simulation with animation
     Graph.d3ReheatSimulation();
@@ -652,6 +712,9 @@ document.addEventListener('DOMContentLoaded', () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+
+    // Reset modification flag after saving
+    isGraphModified = false;
   }
 
   function loadGraph() {
@@ -737,6 +800,15 @@ document.addEventListener('DOMContentLoaded', () => {
           updateLinkPropertiesUI();
           Graph.graphData(gData);
 
+          // Reset modification flag after loading
+          isGraphModified = false;
+
+          // Enable Clear button if graph has nodes
+          if (gData.nodes.length > 0) {
+            document.getElementById('clearGraphBtn').disabled = false;
+            document.getElementById('clearGraphBtn').style.opacity = '1';
+          }
+
           // Reattach event listener to the new node size input
           const sizeInput = document.getElementById('nodeSize');
           sizeInput.addEventListener('input', () => {
@@ -792,5 +864,45 @@ document.addEventListener('DOMContentLoaded', () => {
   function hideGraphError() {
     const errorDiv = document.getElementById('graphError');
     errorDiv.style.display = 'none';
+  }
+
+  function showClearConfirmModal() {
+    document.getElementById('clearConfirmModal').style.display = 'flex';
+  }
+
+  function hideClearConfirmModal() {
+    document.getElementById('clearConfirmModal').style.display = 'none';
+  }
+
+  function clearGraph() {
+    // Clear graph data
+    gData.nodes = [];
+    gData.links = [];
+    
+    // Reset state variables
+    selectedNode = null;
+    selectedLink = null;
+    isCreatingLink = true;
+    nextNodeId = 1;
+    isGraphModified = false;
+    
+    // Reset view
+    Graph.centerAt(0, 0, 1000);
+    Graph.zoom(1.5);
+    
+    // Update graph and UI
+    Graph.graphData(gData);
+    updateNodePropertiesUI();
+    updateLinkPropertiesUI();
+    
+    // Reset node label input
+    document.getElementById('nodeLabel').value = '';
+    
+    // Reset graph name
+    document.getElementById('graphName').value = '';
+    
+    // Disable Clear button
+    document.getElementById('clearGraphBtn').disabled = true;
+    document.getElementById('clearGraphBtn').style.opacity = '0.5';
   }
 }); 

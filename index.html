@@ -61,7 +61,10 @@
 
       <div class="tool-section">
         <h3><center>Graph</center></h3>
-        <button id="autoLayoutBtn" title="Automatically arrange the graph">Auto Layout</button>
+        <div style="display: flex; gap: 10px;">
+          <button id="autoLayoutBtn" style="flex: 1;" title="Automatically arrange the graph">Layout</button>
+          <button id="clearGraphBtn" style="flex: 1;" title="Clear the graph">Clear</button>
+        </div>
         <div style="display: flex; gap: 10px; margin-top: 10px;">
           <button id="saveGraphBtn" style="flex: 1;" title="Save the current graph to a file">Save</button>
           <button id="loadGraphBtn" style="flex: 1;" title="Load a graph from a file">Load</button>
@@ -75,6 +78,17 @@
       </div>
     </div>
     <div id="graph"></div>
+  </div>
+  <div id="clearConfirmModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h3>Clear Graph</h3>
+      <p>You have unsaved changes. What would you like to do?</p>
+      <div class="modal-buttons">
+        <button id="saveAndClearBtn" class="modal-btn">Save & Clear</button>
+        <button id="clearWithoutSaveBtn" class="modal-btn danger">Clear without Saving</button>
+        <button id="cancelClearBtn" class="modal-btn">Cancel</button>
+      </div>
+    </div>
   </div>
 </body>
 </html> 
