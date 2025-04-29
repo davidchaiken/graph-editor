@@ -4,6 +4,9 @@ document.addEventListener('DOMContentLoaded', () => {
   updateNodeSizePreview();
   updateLinkThicknessPreview();
 
+  // Set initial opacity for Delete Node button
+  document.getElementById('deleteNodeBtn').style.opacity = '0.5';
+
   // Add global event listener for node size slider
   document.getElementById('nodeSize').addEventListener('input', () => {
     updateNodeSizePreview();
