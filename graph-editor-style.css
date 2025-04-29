@@ -1,0 +1,250 @@
+body { 
+  margin: 0;
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.9em;
+  background-color: #fafafa;
+  color: #212121;
+}
+
+#container {
+  display: flex;
+  height: 100vh;
+}
+
+#sidebar {
+  width: 150px;
+  background: white;
+  padding: 15px;
+  border-right: 1px solid #e0e0e0;
+}
+
+#graph {
+  flex: 1;
+  background: white;
+  border-left: 1px solid #e0e0e0;
+}
+
+.tool-section {
+  margin-bottom: 20px;
+  padding: 10px;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  position: relative;
+}
+
+.tool-section h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #212121;
+  font-size: 0.95em;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-group {
+  margin-bottom: 10px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  color: #212121;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+input, select {
+  width: 100%;
+  padding: 5px;
+  box-sizing: border-box;
+  border: 1px solid #e0e0e0;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+button {
+  width: 100%;
+  padding: 8px;
+  background: #1f77b4;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+button:hover {
+  background: #2196f3;
+}
+
+/* Add styles for the toggle switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  height: 24px;
+  min-width: 40px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #1f77b4;
+}
+
+input:checked + .slider:before {
+  left: calc(100% - 21px);
+}
+
+.color-palette {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 8px;
+  justify-items: center;
+}
+
+.color-option {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+  transition: box-shadow 0.2s ease;
+}
+
+.color-option.selected {
+  box-shadow: 0 0 15px 2px rgba(0, 0, 0, 0.3);
+}
+
+.color-option:hover {
+  box-shadow: 0 0 15px 2px rgba(0, 0, 0, 0.2);
+}
+
+.color-picker-container {
+  margin-top: 5px;
+}
+
+.color-picker-container input[type="color"] {
+  width: 100%;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  cursor: pointer;
+  title: "Create a custom color";
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+  height: 4px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+}
+
+/* Webkit styles (Chrome, Safari, etc) */
+input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(to right, #1f77b4 0%, #1f77b4 var(--value-percent), #e0e0e0 var(--value-percent), #e0e0e0 100%);
+  border-radius: 2px;
+  border: none;
+  -webkit-appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -6px;
+  background-color: #1f77b4;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+  -webkit-appearance: none;
+}
+
+/* Firefox styles */
+input[type="range"]::-moz-range-track {
+  width: 100%;
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  border: none;
+}
+
+input[type="range"]::-moz-range-progress {
+  background: #1f77b4;
+  height: 4px;
+  border-radius: 2px;
+}
+
+input[type="range"]::-moz-range-thumb {
+  border: none;
+  background-color: #1f77b4;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* Focus styles */
+input[type="range"]:focus {
+  outline: none;
+}
+
+input[type="range"]:focus::-webkit-slider-thumb {
+  background-color: #1f77b4;
+}
+
+input[type="range"]:focus::-moz-range-thumb {
+  background-color: #1f77b4;
+}
+
+.color-palette.hidden {
+  display: none;
+} 
