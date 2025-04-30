@@ -14,32 +14,38 @@ document.addEventListener('DOMContentLoaded', () => {
   // Track if graph has been modified
   let isGraphModified = false;
 
+  // Track the current operation (clear or load)
+  let modalFunction = null;
+
+  function executeOrConfirm(graphFunction) {
+    hideGraphError();
+    if (isGraphModified) {
+      modalFunction = graphFunction;
+      showConfirmModal();
+    } else {
+      graphFunction();
+    }
+  }
+
   // Add event listeners for modal buttons
-  document.getElementById('saveAndClearBtn').addEventListener('click', () => {
+  document.getElementById('saveAndProceedBtn').addEventListener('click', () => {
     saveGraph();
-    clearGraph();
-    hideClearConfirmModal();
+    hideConfirmModal();
+    if (modalFunction) {
+      modalFunction();
+      modalFunction = null;
+    }
   });
 
-  document.getElementById('clearWithoutSaveBtn').addEventListener('click', () => {
-    clearGraph();
-    hideClearConfirmModal();
+  document.getElementById('proceedWithoutSaveBtn').addEventListener('click', () => {
+    hideConfirmModal();
+    if (modalFunction) {
+      modalFunction();
+      modalFunction = null;
+    }
   });
 
-  document.getElementById('cancelClearBtn').addEventListener('click', hideClearConfirmModal);
-
-  document.getElementById('saveAndLoadBtn').addEventListener('click', () => {
-    saveGraph();
-    hideLoadConfirmModal();
-    loadGraph();
-  });
-
-  document.getElementById('loadWithoutSaveBtn').addEventListener('click', () => {
-    hideLoadConfirmModal();
-    loadGraph();
-  });
-
-  document.getElementById('cancelLoadBtn').addEventListener('click', hideLoadConfirmModal);
+  document.getElementById('cancelBtn').addEventListener('click', hideConfirmModal);
 
   // Add global event listener for node size slider
   document.getElementById('nodeSize').addEventListener('input', () => {
@@ -207,20 +213,11 @@ document.addEventListener('DOMContentLoaded', () => {
     saveGraph();
   });
   document.getElementById('loadGraphBtn').addEventListener('click', () => {
-    hideGraphError();
-    if (isGraphModified) {
-      showLoadConfirmModal();
-    } else {
-      loadGraph();
-    }
+    executeOrConfirm(loadGraph);
   });
 
   document.getElementById('clearGraphBtn').addEventListener('click', () => {
-    if (isGraphModified) {
-      showClearConfirmModal();
-    } else {
-      clearGraph();
-    }
+    executeOrConfirm(clearGraph);
   });
 
   // Add keyboard event handler for Delete and Backspace keys
@@ -425,13 +422,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Remove the node
     gData.nodes = gData.nodes.filter(node => node.id !== nodeIdToDelete);
 
-    // Mark graph as modified
-    isGraphModified = true;
-
     // Disable Clear button if no nodes remain
     if (gData.nodes.length === 0) {
       document.getElementById('clearGraphBtn').disabled = true;
       document.getElementById('clearGraphBtn').style.opacity = '0.5';
+      isGraphModified = false; // special case: no need to save, even if the graph is modified
+    } else {
+      isGraphModified = true; // mark graph as modified
     }
 
     // Clear selection
@@ -884,20 +881,12 @@ document.addEventListener('DOMContentLoaded', () => {
     errorDiv.style.display = 'none';
   }
 
-  function showClearConfirmModal() {
-    document.getElementById('clearConfirmModal').style.display = 'flex';
+  function showConfirmModal() {
+    document.getElementById('confirmModal').style.display = 'flex';
   }
 
-  function hideClearConfirmModal() {
-    document.getElementById('clearConfirmModal').style.display = 'none';
-  }
-
-  function showLoadConfirmModal() {
-    document.getElementById('loadConfirmModal').style.display = 'flex';
-  }
-
-  function hideLoadConfirmModal() {
-    document.getElementById('loadConfirmModal').style.display = 'none';
+  function hideConfirmModal() {
+    document.getElementById('confirmModal').style.display = 'none';
   }
 
   function clearGraph() {
