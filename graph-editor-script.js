@@ -27,23 +27,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function hideConfirmModalAndExecute() {
+    hideConfirmModal();
+    if (modalFunction) {
+      modalFunction();
+      modalFunction = null;
+    }
+  }
+
   // Add event listeners for modal buttons
   document.getElementById('saveAndProceedBtn').addEventListener('click', () => {
     saveGraph();
-    hideConfirmModal();
-    if (modalFunction) {
-      modalFunction();
-      modalFunction = null;
-    }
+    hideConfirmModalAndExecute();
   });
 
-  document.getElementById('proceedWithoutSaveBtn').addEventListener('click', () => {
-    hideConfirmModal();
-    if (modalFunction) {
-      modalFunction();
-      modalFunction = null;
-    }
-  });
+  document.getElementById('proceedWithoutSaveBtn').addEventListener('click', hideConfirmModalAndExecute);
 
   document.getElementById('cancelBtn').addEventListener('click', hideConfirmModal);
 
