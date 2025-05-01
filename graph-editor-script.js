@@ -61,6 +61,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('cancelBtn').addEventListener('click', hideConfirmModal);
 
+  // Add help icon event listener
+  document.getElementById('helpIcon').addEventListener('click', () => {
+    window.open('https://github.com/davidchaiken/graph-editor/blob/main/README.md', '_blank');
+  });
+
   // Add global event listener for node size slider
   document.getElementById('nodeSize').addEventListener('input', () => {
     updateNodeSizePreview();

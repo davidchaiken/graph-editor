@@ -330,4 +330,26 @@ input[type="range"]:focus::-moz-range-thumb {
 
 .modal-btn.danger:hover {
   background-color: #f44336;
+}
+
+#helpIcon {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  width: 30px;
+  height: 30px;
+  background-color: #1f77b4;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: 500;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+#helpIcon:hover {
+  background-color: #2196f3;
 } 
