@@ -761,119 +761,7 @@ document.addEventListener('DOMContentLoaded', () => {
       reader.onload = event => {
         try {
           const graphData = JSON.parse(event.target.result);
-          
-          // Validate the loaded data
-          if (!graphData.nodes || !graphData.links) {
-            showGraphError('Invalid graph data format');
-            return;
-          }
-
-          // Set the graph name if it exists in the metadata
-          if (graphData.metadata && graphData.metadata.name) {
-            document.getElementById('graphName').value = graphData.metadata.name;
-          } else {
-            document.getElementById('graphName').value = ''; // Clear the name if no metadata or no name
-          }
-
-          // Check for duplicate node IDs
-          const nodeIds = new Set();
-          let maxNodeId = 0;
-          for (const node of graphData.nodes) {
-            if (nodeIds.has(node.id)) {
-              showGraphError('Error: Duplicate node ID found in graph');
-              return;
-            }
-            nodeIds.add(node.id);
-            maxNodeId = Math.max(maxNodeId, node.id);
-          }
-
-          // Clear current graph
-          gData.nodes = [];
-          gData.links = [];
-
-          // Load nodes
-          graphData.nodes.forEach(nodeData => {
-            gData.nodes.push({
-              id: nodeData.id,
-              label: nodeData.label,
-              color: nodeData.color,
-              size: nodeData.size,
-              x: nodeData.x,
-              y: nodeData.y,
-              fx: nodeData.x,  // Fix the node in its loaded position
-              fy: nodeData.y   // Fix the node in its loaded position
-            });
-          });
-
-          // Load links
-          graphData.links.forEach(linkData => {
-            const sourceNode = gData.nodes.find(n => n.id === linkData.source);
-            const targetNode = gData.nodes.find(n => n.id === linkData.target);
-            
-            if (sourceNode && targetNode) {
-              gData.links.push({
-                source: sourceNode,
-                target: targetNode,
-                thickness: linkData.thickness,
-                color: linkData.color
-              });
-            }
-          });
-
-          // Set nextNodeId to max ID + 1
-          nextNodeId = maxNodeId + 1;
-
-          // Update the graph
-          selectedNode = null;
-          selectedLink = null;
-          updateNodePropertiesUI();
-          updateLinkPropertiesUI();
-          Graph.graphData(gData);
-
-          // Reset modification flag after loading
-          isGraphModified = false;
-
-          // Enable Clear button if graph has nodes
-          if (gData.nodes.length > 0) {
-            document.getElementById('clearGraphBtn').disabled = false;
-            document.getElementById('clearGraphBtn').style.opacity = '1';
-          }
-
-          // Reattach event listener to the new node size input
-          const sizeInput = document.getElementById('nodeSize');
-          sizeInput.addEventListener('input', () => {
-            updateNodeSizePreview();
-            if (selectedNode) {
-              selectedNode.size = parseInt(sizeInput.value);
-              Graph.graphData(gData);
-            }
-          });
-
-          // Calculate bounds of the loaded graph
-          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-          gData.nodes.forEach(node => {
-            minX = Math.min(minX, node.x);
-            minY = Math.min(minY, node.y);
-            maxX = Math.max(maxX, node.x);
-            maxY = Math.max(maxY, node.y);
-          });
-
-          // If we have nodes, center and zoom to fit them
-          if (gData.nodes.length > 0) {
-            const centerX = (minX + maxX) / 2;
-            const centerY = (minY + maxY) / 2;
-            const width = maxX - minX;
-            const height = maxY - minY;
-            const scale = Math.min(
-              (window.innerWidth - 250) / (width + 100), // Account for sidebar and padding
-              window.innerHeight / (height + 100)
-            );
-            
-            Graph.d3Force('center', null) // center force is not intuitive when editing
-            Graph.centerAt(centerX, centerY, 1000);
-            Graph.zoom(scale * 0.8); // Zoom to 80% of the calculated scale to add some padding
-          }
-
+          processGraphData(graphData);
         } catch (error) {
           showGraphError('Error loading graph: ' + error.message);
         }
@@ -882,6 +770,109 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     input.click();
+  }
+
+  // This function processes the graph data and updates the graph.
+  // It is called when the user loads a graph and for the example graph on initialization.
+  // Error handling needs to be done by the caller.
+  function processGraphData(graphData) {
+    // Validate the loaded data
+    if (!graphData.nodes || !graphData.links) {
+      throw new Error('Invalid graph data format');
+    }
+
+    // Set the graph name if it exists in the metadata
+    if (graphData.metadata && graphData.metadata.name) {
+      document.getElementById('graphName').value = graphData.metadata.name;
+    }
+
+    // Check for duplicate node IDs
+    const nodeIds = new Set();
+    let maxNodeId = 0;
+    for (const node of graphData.nodes) {
+      if (nodeIds.has(node.id)) {
+        throw new Error('Error: Duplicate node ID found in graph');
+      }
+      nodeIds.add(node.id);
+      maxNodeId = Math.max(maxNodeId, node.id);
+    }
+
+    // Clear current graph
+    gData.nodes = [];
+    gData.links = [];
+
+    // Load nodes
+    graphData.nodes.forEach(nodeData => {
+      gData.nodes.push({
+        id: nodeData.id,
+        label: nodeData.label,
+        color: nodeData.color,
+        size: nodeData.size,
+        x: nodeData.x,
+        y: nodeData.y,
+        fx: nodeData.x,  // Fix the node in its loaded position
+        fy: nodeData.y   // Fix the node in its loaded position
+      });
+    });
+
+    // Load links
+    graphData.links.forEach(linkData => {
+      const sourceNode = gData.nodes.find(n => n.id === linkData.source);
+      const targetNode = gData.nodes.find(n => n.id === linkData.target);
+      
+      if (sourceNode && targetNode) {
+        gData.links.push({
+          source: sourceNode,
+          target: targetNode,
+          thickness: linkData.thickness,
+          color: linkData.color
+        });
+      }
+    });
+
+    // Set nextNodeId to max ID + 1
+    nextNodeId = maxNodeId + 1;
+
+    // Update the graph
+    selectedNode = null;
+    selectedLink = null;
+    updateNodePropertiesUI();
+    updateLinkPropertiesUI();
+    Graph.graphData(gData);
+
+    // Reset modification flag after loading
+    isGraphModified = false;
+
+    // Enable Clear button if graph has nodes
+    if (gData.nodes.length > 0) {
+      document.getElementById('clearGraphBtn').disabled = false;
+      document.getElementById('clearGraphBtn').style.opacity = '1';
+    }
+
+    // Calculate bounds of the loaded graph
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    gData.nodes.forEach(node => {
+      minX = Math.min(minX, node.x);
+      minY = Math.min(minY, node.y);
+      maxX = Math.max(maxX, node.x);
+      maxY = Math.max(maxY, node.y);
+    });
+
+    // If we have nodes, center and zoom to fit them
+    if (gData.nodes.length > 0) {
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+      const width = maxX - minX;
+      const height = maxY - minY;
+      const scale = Math.min(
+        (window.innerWidth - 250) / (width + 100), // Account for sidebar and padding
+        window.innerHeight / (height + 100)
+      );
+      
+      Graph.d3Force('center', null) // center force is not intuitive when editing
+      Graph.centerAt(centerX, centerY, 1000);
+      Graph.zoom(scale * 0.8); // Zoom to 80% of the calculated scale to add some padding
+    }
   }
 
   function showGraphError(message) {
@@ -935,4 +926,20 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('clearGraphBtn').disabled = true;
     document.getElementById('clearGraphBtn').style.opacity = '0.5';
   }
+
+  // Load example graph on initialization
+  fetch('example.json')
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Failed to load example graph');
+      }
+      return response.json();
+    })
+    .then(graphData => {
+      // Use the existing loadGraph function to process the data
+      processGraphData(graphData);
+    })
+    .catch(error => {
+      console.error('Error loading example graph:', error);
+    });
 }); 

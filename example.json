@@ -1,0 +1,444 @@
+{
+  "metadata": {
+    "application": "graph-editor",
+    "version": "0.1",
+    "timestamp": "2025-05-01T20:58:29Z",
+    "name": "example"
+  },
+  "nodes": [
+    {
+      "id": 1,
+      "label": "Me",
+      "color": "#1f77b4",
+      "size": 11,
+      "x": 4.137869312277878,
+      "y": 20.08063031089211
+    },
+    {
+      "id": 2,
+      "label": "Spouse",
+      "color": "#1f77b4",
+      "size": 11,
+      "x": 70.91912565277161,
+      "y": 18.926105998232927
+    },
+    {
+      "id": 3,
+      "label": "Activities",
+      "color": "#7f7f7f",
+      "size": 5,
+      "x": -141.61008015696706,
+      "y": 2.7965289567740146
+    },
+    {
+      "id": 4,
+      "label": "Faith",
+      "color": "#bcbd22",
+      "size": 6,
+      "x": 73.31878205369998,
+      "y": 101.21176642800529
+    },
+    {
+      "id": 5,
+      "label": "Family",
+      "color": "#e377c2",
+      "size": 7,
+      "x": 4.939752577154791,
+      "y": 101.89963645085726
+    },
+    {
+      "id": 6,
+      "label": "Kids",
+      "color": "#e377c2",
+      "size": 7,
+      "x": -66.50387324266873,
+      "y": 169.61102011872708
+    },
+    {
+      "id": 7,
+      "label": "Parents",
+      "color": "#e377c2",
+      "size": 6,
+      "x": 17.372457484569374,
+      "y": 237.89212628476972
+    },
+    {
+      "id": 8,
+      "label": "Home",
+      "color": "#9467bd",
+      "size": 6,
+      "x": 63.57829782685194,
+      "y": -99.77306275430067
+    },
+    {
+      "id": 9,
+      "label": "Food",
+      "color": "#9467bd",
+      "size": 5,
+      "x": -51.58884909743254,
+      "y": -214.18546254135373
+    },
+    {
+      "id": 10,
+      "label": "Fitness",
+      "color": "#7f7f7f",
+      "size": 5,
+      "x": -218.4745371221234,
+      "y": -22.424841914816618
+    },
+    {
+      "id": 11,
+      "label": "Health",
+      "color": "#9467bd",
+      "size": 6,
+      "x": -174.56790633748585,
+      "y": -117.19601493332246
+    },
+    {
+      "id": 12,
+      "label": "Cooking",
+      "color": "#9467bd",
+      "size": 6,
+      "x": -52.95919561767113,
+      "y": -142.9855981118326
+    },
+    {
+      "id": 13,
+      "label": "Hobbies",
+      "color": "#7f7f7f",
+      "size": 5,
+      "x": -208.80984248417823,
+      "y": 91.30037027300007
+    },
+    {
+      "id": 14,
+      "label": "Friends",
+      "color": "#7f7f7f",
+      "size": 7,
+      "x": -150.90365488094926,
+      "y": 126.52466686172066
+    },
+    {
+      "id": 16,
+      "label": "Community",
+      "color": "#bcbd22",
+      "size": 6,
+      "x": 136.7410008210119,
+      "y": 236.21499856260203
+    },
+    {
+      "id": 17,
+      "label": "Travel",
+      "color": "#7f7f7f",
+      "size": 7,
+      "x": -67.72416642290781,
+      "y": 107.7391792222614
+    },
+    {
+      "id": 18,
+      "label": "Chores",
+      "color": "#9467bd",
+      "size": 5,
+      "x": -49.364701537268616,
+      "y": -66.89319972586483
+    },
+    {
+      "id": 19,
+      "label": "Spouse's Friends",
+      "color": "#17becf",
+      "size": 6,
+      "x": 209.4090236488151,
+      "y": 63.96976230372832
+    },
+    {
+      "id": 20,
+      "label": "Spouse's Work",
+      "color": "#17becf",
+      "size": 5,
+      "x": 205.89016064972006,
+      "y": -27.02766680165376
+    },
+    {
+      "id": 21,
+      "label": "Finances",
+      "color": "#9467bd",
+      "size": 5,
+      "x": 143.28321965341917,
+      "y": -99.28135217944467
+    },
+    {
+      "id": 22,
+      "label": "Activism",
+      "color": "#bcbd22",
+      "size": 8,
+      "x": 53.151559721451335,
+      "y": 168.99258488277724
+    }
+  ],
+  "links": [
+    {
+      "source": 2,
+      "target": 1,
+      "thickness": 3,
+      "color": "#1f77b4"
+    },
+    {
+      "source": 3,
+      "target": 1,
+      "thickness": 1,
+      "color": "#7f7f7f"
+    },
+    {
+      "source": 4,
+      "target": 1,
+      "thickness": 2,
+      "color": "#bcbd22"
+    },
+    {
+      "source": 4,
+      "target": 2,
+      "thickness": 3,
+      "color": "#bcbd22"
+    },
+    {
+      "source": 5,
+      "target": 1,
+      "thickness": 2,
+      "color": "#e377c2"
+    },
+    {
+      "source": 5,
+      "target": 4,
+      "thickness": 1,
+      "color": "#e377c2"
+    },
+    {
+      "source": 5,
+      "target": 6,
+      "thickness": 1,
+      "color": "#e377c2"
+    },
+    {
+      "source": 5,
+      "target": 2,
+      "thickness": 2,
+      "color": "#e377c2"
+    },
+    {
+      "source": 7,
+      "target": 5,
+      "thickness": 1,
+      "color": "#e377c2"
+    },
+    {
+      "source": 7,
+      "target": 6,
+      "thickness": 1,
+      "color": "#e377c2"
+    },
+    {
+      "source": 8,
+      "target": 1,
+      "thickness": 1,
+      "color": "#9467bd"
+    },
+    {
+      "source": 8,
+      "target": 2,
+      "thickness": 1,
+      "color": "#9467bd"
+    },
+    {
+      "source": 10,
+      "target": 3,
+      "thickness": 1,
+      "color": "#7f7f7f"
+    },
+    {
+      "source": 11,
+      "target": 9,
+      "thickness": 2,
+      "color": "#9467bd"
+    },
+    {
+      "source": 9,
+      "target": 8,
+      "thickness": 1,
+      "color": "#9467bd"
+    },
+    {
+      "source": 12,
+      "target": 9,
+      "thickness": 2,
+      "color": "#9467bd"
+    },
+    {
+      "source": 12,
+      "target": 8,
+      "thickness": 1,
+      "color": "#9467bd"
+    },
+    {
+      "source": 10,
+      "target": 11,
+      "thickness": 3,
+      "color": "#7f7f7f"
+    },
+    {
+      "source": 13,
+      "target": 3,
+      "thickness": 1,
+      "color": "#7f7f7f"
+    },
+    {
+      "source": 14,
+      "target": 1,
+      "thickness": 1,
+      "color": "#7f7f7f"
+    },
+    {
+      "source": 13,
+      "target": 14,
+      "thickness": 2,
+      "color": "#7f7f7f"
+    },
+    {
+      "source": 14,
+      "target": 3,
+      "thickness": 1,
+      "color": "#7f7f7f"
+    },
+    {
+      "source": 4,
+      "target": 16,
+      "thickness": 1,
+      "color": "#bcbd22"
+    },
+    {
+      "source": 16,
+      "target": 7,
+      "thickness": 1,
+      "color": "#bcbd22"
+    },
+    {
+      "source": 17,
+      "target": 14,
+      "thickness": 1,
+      "color": "#7f7f7f"
+    },
+    {
+      "source": 17,
+      "target": 5,
+      "thickness": 1,
+      "color": "#7f7f7f"
+    },
+    {
+      "source": 17,
+      "target": 3,
+      "thickness": 1,
+      "color": "#7f7f7f"
+    },
+    {
+      "source": 18,
+      "target": 8,
+      "thickness": 1,
+      "color": "#9467bd"
+    },
+    {
+      "source": 18,
+      "target": 3,
+      "thickness": 1,
+      "color": "#9467bd"
+    },
+    {
+      "source": 17,
+      "target": 2,
+      "thickness": 1,
+      "color": "#7f7f7f"
+    },
+    {
+      "source": 19,
+      "target": 2,
+      "thickness": 1,
+      "color": "#bcbd22"
+    },
+    {
+      "source": 4,
+      "target": 19,
+      "thickness": 1,
+      "color": "#bcbd22"
+    },
+    {
+      "source": 21,
+      "target": 8,
+      "thickness": 1,
+      "color": "#9467bd"
+    },
+    {
+      "source": 20,
+      "target": 21,
+      "thickness": 1,
+      "color": "#9467bd"
+    },
+    {
+      "source": 20,
+      "target": 2,
+      "thickness": 1,
+      "color": "#17becf"
+    },
+    {
+      "source": 20,
+      "target": 19,
+      "thickness": 1,
+      "color": "#17becf"
+    },
+    {
+      "source": 16,
+      "target": 19,
+      "thickness": 1,
+      "color": "#bcbd22"
+    },
+    {
+      "source": 17,
+      "target": 6,
+      "thickness": 1,
+      "color": "#7f7f7f"
+    },
+    {
+      "source": 22,
+      "target": 16,
+      "thickness": 2,
+      "color": "#bcbd22"
+    },
+    {
+      "source": 22,
+      "target": 4,
+      "thickness": 2,
+      "color": "#bcbd22"
+    },
+    {
+      "source": 22,
+      "target": 6,
+      "thickness": 1,
+      "color": "#bcbd22"
+    },
+    {
+      "source": 17,
+      "target": 1,
+      "thickness": 1,
+      "color": "#7f7f7f"
+    },
+    {
+      "source": 3,
+      "target": 12,
+      "thickness": 1,
+      "color": "#7f7f7f"
+    },
+    {
+      "source": 11,
+      "target": 1,
+      "thickness": 1,
+      "color": "#9467bd"
+    }
+  ]
+}
