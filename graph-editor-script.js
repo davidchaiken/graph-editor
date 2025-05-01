@@ -173,8 +173,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }))
       .d3Force('center', null) // center force is not intuitive when editing
       .d3Force('collision', d3.forceCollide(node => (node.size || 5) + 1))
-      .width(window.innerWidth - 250) // Account for sidebar width
-      .height(window.innerHeight);
+      .width(document.getElementById('graph').offsetWidth)
+      .height(document.getElementById('graph').offsetHeight);
 
   // Initialize view
   Graph.centerAt(0, 0, 1000);
@@ -187,9 +187,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Handle window resize
   window.addEventListener('resize', () => {
+    const graphElement = document.getElementById('graph');
     Graph
-      .width(window.innerWidth - 250)
-      .height(window.innerHeight);
+      .width(graphElement.offsetWidth)
+      .height(graphElement.offsetHeight);
   });
 
   // State variables
@@ -383,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const uniqueLabel = getUniqueLabel(proposedLabel);
 
     // Get current viewport dimensions
-    const viewportWidth = window.innerWidth - 250; // Account for sidebar
+    const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
     // For the first node, place it at the origin
