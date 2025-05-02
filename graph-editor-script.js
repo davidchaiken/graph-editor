@@ -947,4 +947,19 @@ document.addEventListener('DOMContentLoaded', () => {
     .catch(error => {
       console.error('Error loading example graph:', error);
     });
+
+  // Dismiss help banner on any user action
+  function dismissHelpBanner() {
+    const banner = document.getElementById('helpBanner');
+    if (banner) banner.style.display = 'none';
+
+    // Remove event listeners after first action
+    window.removeEventListener('mousedown', dismissHelpBanner, true);
+    window.removeEventListener('keydown', dismissHelpBanner, true);
+    window.removeEventListener('touchstart', dismissHelpBanner, true);
+  }
+
+  window.addEventListener('mousedown', dismissHelpBanner, true);
+  window.addEventListener('keydown', dismissHelpBanner, true);
+  window.addEventListener('touchstart', dismissHelpBanner, true);
 }); 
