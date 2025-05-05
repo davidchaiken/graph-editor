@@ -87,6 +87,62 @@ document.addEventListener('DOMContentLoaded', () => {
       .nodeVal('size')
       .linkWidth('thickness')
       .linkColor('color')
+      .linkLabel(link => link.label || '')  // Use a function to handle undefined labels
+      .linkCanvasObject((link, ctx, globalScale) => {
+        const source = link.source;
+        const target = link.target;
+        
+        // Draw link
+        ctx.beginPath();
+        ctx.moveTo(source.x, source.y);
+        ctx.lineTo(target.x, target.y);
+        
+        // Set line style based on selection
+        if (link === selectedLink) {
+          // Glow effect for selected links
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = link.color || '#1f77b4';
+          ctx.lineWidth = (link.thickness || 1) * 0.75;
+        } else {
+          // Normal style for unselected links
+          ctx.shadowBlur = 0;
+          ctx.lineWidth = (link.thickness || 1) * 0.5;
+        }
+        
+        ctx.strokeStyle = link.color || '#1f77b4';
+        ctx.stroke();
+
+        // Draw link label if it exists
+        if (link.label) {
+          const midX = (source.x + target.x) / 2;
+          const midY = (source.y + target.y) / 2;
+          
+          // Calculate angle for text rotation
+          const angle = Math.atan2(target.y - source.y, target.x - source.x);
+          
+          // Save context state
+          ctx.save();
+          
+          // Move to midpoint and rotate
+          ctx.translate(midX, midY);
+          
+          // Adjust angle to keep text readable
+          // If the angle is in the bottom half of the circle, flip the text
+          const adjustedAngle = angle + (Math.abs(angle) > Math.PI/2 ? Math.PI : 0);
+          ctx.rotate(adjustedAngle);
+          
+          // Draw text
+          const fontSize = 12/globalScale;
+          ctx.font = `italic ${fontSize}px Sans-Serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = 'black';
+          ctx.fillText(link.label, 0, -10); // Offset text above the line
+          
+          // Restore context state
+          ctx.restore();
+        }
+      })
       .onNodeClick((node, event) => handleNodeClickForLink(node, event))
       .onNodeRightClick(handleNodeRightClick)
       .onLinkClick(handleLinkClick)
@@ -100,6 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteNodeBtn.style.opacity = '0.5';
         deleteLinkBtn.disabled = true;
         deleteLinkBtn.style.opacity = '0.5';
+        // Clear link label input
+        document.getElementById('linkLabel').value = '';
         Graph.graphData(gData);
       })
       .onNodeDragEnd(node => {
@@ -136,30 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.textBaseline = 'middle';
         ctx.fillStyle = 'black';
         ctx.fillText(label, node.x, node.y + (node.size || 5) + fontSize);
-      })
-      .linkCanvasObject((link, ctx, globalScale) => {
-        const source = link.source;
-        const target = link.target;
-        
-        // Draw link
-        ctx.beginPath();
-        ctx.moveTo(source.x, source.y);
-        ctx.lineTo(target.x, target.y);
-        
-        // Set line style based on selection
-        if (link === selectedLink) {
-          // Glow effect for selected links
-          ctx.shadowBlur = 15;
-          ctx.shadowColor = link.color || '#1f77b4';
-          ctx.lineWidth = (link.thickness || 1) * 0.75;
-        } else {
-          // Normal style for unselected links
-          ctx.shadowBlur = 0;
-          ctx.lineWidth = (link.thickness || 1) * 0.5;
-        }
-        
-        ctx.strokeStyle = link.color || '#1f77b4';
-        ctx.stroke();
       })
       .d3Force('charge', d3.forceManyBody().strength(-100))
       .d3Force('link', d3.forceLink().distance(link => {
@@ -243,7 +277,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Add keyboard event handler for Delete and Backspace keys
   document.addEventListener('keydown', (event) => {
     if ((event.key === 'Delete' || event.key === 'Backspace') &&
-        document.activeElement !== document.getElementById('nodeLabel')) {
+        document.activeElement !== document.getElementById('nodeLabel') &&
+        document.activeElement !== document.getElementById('linkLabel')) {
       if (selectedLink) {
         deleteLink();
       } else if (selectedNode) {
@@ -303,6 +338,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const color = e.target.value;
     applyColor(color);
     updateColorSelection(color);
+  });
+
+  // Add event listener for link label changes
+  document.getElementById('linkLabel').addEventListener('input', (e) => {
+    if (selectedLink) {
+      selectedLink.label = e.target.value;
+      isGraphModified = true;
+      // Force immediate update of the graph
+      Graph.graphData(gData);
+      Graph.d3ReheatSimulation();
+    }
   });
 
   // Helper function to apply color to selected entity
@@ -541,7 +587,8 @@ document.addEventListener('DOMContentLoaded', () => {
           source: selectedNode.id,
           target: node.id,
           thickness: parseInt(document.getElementById('linkThickness').value),
-          color: document.getElementById('colorPicker').value
+          color: document.getElementById('colorPicker').value,
+          label: document.getElementById('linkLabel').value || undefined
         };
         gData.links.push(newLink);
         Graph.graphData(gData);
@@ -592,12 +639,33 @@ document.addEventListener('DOMContentLoaded', () => {
     Graph.graphData(gData);
   }
 
-  function handleLinkClick(link) {
+  function handleLinkClick(link, event) {
+    event.stopPropagation();
     selectedLink = link;
     selectedNode = null;
-    updateNodePropertiesUI();
-    updateLinkPropertiesUI();
+    
+    // Update UI to reflect link selection
+    const deleteNodeBtn = document.getElementById('deleteNodeBtn');
+    const deleteLinkBtn = document.getElementById('deleteLinkBtn');
+    deleteNodeBtn.disabled = true;
+    deleteNodeBtn.style.opacity = '0.5';
+    deleteLinkBtn.disabled = false;
+    deleteLinkBtn.style.opacity = '1';
+    
+    // Update link label input
+    document.getElementById('linkLabel').value = link.label || '';
+    
+    // Update link thickness slider
+    const thicknessSlider = document.getElementById('linkThickness');
+    thicknessSlider.value = link.thickness;
+    updateLinkThicknessPreview();
+    
+    // Update color palette
+    updateColorSelection(link.color);
+
+    // Force graph update to show label
     Graph.graphData(gData);
+    Graph.d3ReheatSimulation();
   }
 
   function updateNodePropertiesUI() {
@@ -731,7 +799,8 @@ document.addEventListener('DOMContentLoaded', () => {
         source: link.source.id,
         target: link.target.id,
         thickness: link.thickness,
-        color: link.color
+        color: link.color,
+        label: link.label
       }))
     };
 
@@ -830,7 +899,8 @@ document.addEventListener('DOMContentLoaded', () => {
           source: sourceNode,
           target: targetNode,
           thickness: linkData.thickness,
-          color: linkData.color
+          color: linkData.color,
+          label: linkData.label
         });
       }
     });

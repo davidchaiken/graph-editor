@@ -180,6 +180,7 @@
       "source": 2,
       "target": 1,
       "thickness": 3,
+      "label": "married",
       "color": "#1f77b4"
     },
     {
