@@ -33,6 +33,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Track the current operation (clear or load)
   let modalFunction = null;
 
+  // Add this variable at the top level with other state variables
+  let isFirstSave = true;
+
   function executeOrConfirm(graphFunction) {
     hideGraphError();
     if (isGraphModified) {
@@ -53,7 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Add event listeners for modal buttons
   document.getElementById('saveAndProceedBtn').addEventListener('click', () => {
-    saveGraph();
+    const graphName = document.getElementById('graphName').value || 'graph';
+    saveGraphFileToDisk(graphName);
     hideConfirmModalAndExecute();
   });
 
@@ -282,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('saveGraphBtn').addEventListener('click', () => {
     hideGraphError();
-    saveGraph();
+    showSaveGraphModal();
   });
   document.getElementById('loadGraphBtn').addEventListener('click', () => {
     executeOrConfirm(loadGraph);
@@ -817,13 +821,103 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function saveGraph() {
-    // Create a JSON string from the graph data
+    // Show the save graph modal
+    showSaveGraphModal();
+  }
+
+  function updateSaveSelectedButtonState() {
+    const saveGraphFile = document.getElementById('saveGraphFile');
+    const saveImageFile = document.getElementById('saveImageFile');
+    const savePdfFile = document.getElementById('savePdfFile');
+    const saveSelectedBtn = document.getElementById('saveSelectedBtn');
+    
+    if (!saveGraphFile || !saveImageFile || !savePdfFile || !saveSelectedBtn) {
+      return;
+    }
+    
+    const states = {
+      saveGraphFile: saveGraphFile.checked,
+      saveImageFile: saveImageFile.checked,
+      savePdfFile: savePdfFile.checked
+    };
+    
+    // Disable button if no options are checked
+    const shouldDisable = !(states.saveGraphFile || states.saveImageFile || states.savePdfFile);
+    saveSelectedBtn.disabled = shouldDisable;
+    saveSelectedBtn.style.opacity = shouldDisable ? '0.5' : '1';
+  }
+
+  function showSaveGraphModal() {
+    const modal = document.getElementById('saveGraphModal');
+    modal.style.display = 'flex';
+    
+    // Set JSON save option as checked by default only on first save
+    const saveGraphFile = document.getElementById('saveGraphFile');
+    if (saveGraphFile && isFirstSave) {
+      saveGraphFile.checked = true;
+      isFirstSave = false;
+    }
+    
+    // Add event listeners for the checkboxes
+    const checkboxes = ['saveGraphFile', 'saveImageFile', 'savePdfFile'];
+    checkboxes.forEach(id => {
+      const checkbox = document.getElementById(id);
+      if (checkbox) {
+        // Remove any existing listeners
+        checkbox.removeEventListener('change', updateSaveSelectedButtonState);
+        // Add the new listener
+        checkbox.addEventListener('change', function() {
+          updateSaveSelectedButtonState();
+        });
+      }
+    });
+    
+    // Set initial button state
+    updateSaveSelectedButtonState();
+  }
+
+  function hideSaveGraphModal() {
+    document.getElementById('saveGraphModal').style.display = 'none';
+  }
+
+  // Add event listeners for save graph modal buttons
+  document.getElementById('saveSelectedBtn').addEventListener('click', handleSaveSelected);
+  document.getElementById('cancelSaveBtn').addEventListener('click', hideSaveGraphModal);
+
+  function handleSaveSelected() {
+    const saveGraphFile = document.getElementById('saveGraphFile').checked;
+    const saveImageFile = document.getElementById('saveImageFile').checked;
+    const savePdfFile = document.getElementById('savePdfFile').checked;
+
+    if (!saveGraphFile && !saveImageFile && !savePdfFile) {
+      showGraphError('Please select at least one save option');
+      return;
+    }
+
     const graphName = document.getElementById('graphName').value || 'graph';
+
+    if (saveGraphFile) {
+      saveGraphFileToDisk(graphName);
+      isGraphModified = false; // Only clear the modified flag if saving as JSON
+    }
+
+    if (saveImageFile) {
+      saveGraphAsImage(graphName);
+    }
+
+    if (savePdfFile) {
+      saveGraphAsPdf(graphName);
+    }
+
+    hideSaveGraphModal();
+  }
+
+  function saveGraphFileToDisk(graphName) {
     const graphData = {
       metadata: {
         application: "graph-editor",
         version: "0.1",
-        timestamp: new Date().toISOString().split('.')[0] + 'Z', // ISO-8601 without milliseconds, UTC
+        timestamp: new Date().toISOString().split('.')[0] + 'Z',  // Keep UTC for metadata
         name: graphName
       },
       nodes: gData.nodes.map(node => ({
@@ -848,24 +942,141 @@ document.addEventListener('DOMContentLoaded', () => {
     const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
 
-    // Create a temporary link element to trigger the save dialog
+    // Generate date stamp in local time
+    const now = new Date();
+    const dateStamp = now.getFullYear() +
+      String(now.getMonth() + 1).padStart(2, '0') +
+      String(now.getDate()).padStart(2, '0') + 'T' +
+      String(now.getHours()).padStart(2, '0') +
+      String(now.getMinutes()).padStart(2, '0') +
+      String(now.getSeconds()).padStart(2, '0');
+
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${graphName}.json`; // Use the graph name
+    a.download = `${graphName}-${dateStamp}.graph`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
 
-    // Reset modification flag after saving
-    isGraphModified = false;
+  function saveGraphAsImage(graphName) {
+    // Get the graph container
+    const graphContainer = document.getElementById('graph');
+    
+    // Store and remove the pattern canvases
+    const styleOptions = document.getElementById('styleOptions');
+    const patternCanvases = Array.from(styleOptions.querySelectorAll('canvas'));
+    patternCanvases.forEach(canvas => canvas.remove());
+    
+    // Use html2canvas to capture the graph
+    html2canvas(graphContainer, {
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff'
+    }).then(canvas => {
+      // Restore the pattern canvases
+      patternCanvases.forEach(canvas => styleOptions.appendChild(canvas));
+      
+      // Generate date stamp in local time
+      const now = new Date();
+      const dateStamp = now.getFullYear() +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0') + 'T' +
+        String(now.getHours()).padStart(2, '0') +
+        String(now.getMinutes()).padStart(2, '0') +
+        String(now.getSeconds()).padStart(2, '0');
+      
+      // Convert canvas to blob
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${graphName}-${dateStamp}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 'image/png');
+    });
+  }
+
+  function saveGraphAsPdf(graphName) {
+    // Get the graph container
+    const graphContainer = document.getElementById('graph');
+    
+    // Store and remove the pattern canvases
+    const styleOptions = document.getElementById('styleOptions');
+    const patternCanvases = Array.from(styleOptions.querySelectorAll('canvas'));
+    patternCanvases.forEach(canvas => canvas.remove());
+    
+    // Use html2canvas to capture the graph
+    html2canvas(graphContainer, {
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      willReadFrequently: true
+    }).then(canvas => {
+      // Restore the pattern canvases
+      patternCanvases.forEach(canvas => styleOptions.appendChild(canvas));
+      
+      // Generate date stamp in local time
+      const now = new Date();
+      const dateStamp = now.getFullYear() +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0') + 'T' +
+        String(now.getHours()).padStart(2, '0') +
+        String(now.getMinutes()).padStart(2, '0') +
+        String(now.getSeconds()).padStart(2, '0');
+      
+      // Create PDF using the global jspdf object
+      const { jsPDF } = window.jspdf;
+      
+      // Calculate dimensions to fit on A4 landscape with some padding
+      const a4Width = 297; // A4 width in mm
+      const a4Height = 210; // A4 height in mm
+      const padding = 10; // padding in mm
+      
+      // Calculate scale to fit the canvas on A4 while maintaining aspect ratio
+      const scale = Math.min(
+        (a4Width - padding * 2) / canvas.width,
+        (a4Height - padding * 2) / canvas.height
+      );
+      
+      // Calculate dimensions after scaling
+      const scaledWidth = canvas.width * scale;
+      const scaledHeight = canvas.height * scale;
+      
+      // Calculate centering offsets
+      const xOffset = (a4Width - scaledWidth) / 2;
+      const yOffset = (a4Height - scaledHeight) / 2;
+      
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      // Add the image to the PDF with calculated dimensions and position
+      pdf.addImage(
+        canvas.toDataURL('image/png'),
+        'PNG',
+        xOffset,
+        yOffset,
+        scaledWidth,
+        scaledHeight
+      );
+      
+      // Save the PDF
+      pdf.save(`${graphName}-${dateStamp}.pdf`);
+    });
   }
 
   function loadGraph() {
     // Create a file input element
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.json';
+    input.accept = '.graph,.json';  // Accept both .graph and .json for backward compatibility
     
     input.onchange = e => {
       const file = e.target.files[0];

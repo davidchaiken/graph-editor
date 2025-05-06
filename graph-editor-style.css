@@ -306,10 +306,12 @@ input[type="range"]:focus::-moz-range-thumb {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  align-items: center;
 }
 
-.modal-btn {
-  padding: 8px;
+.modal-buttons button {
+  width: 200px;
+  padding: 8px 16px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -317,18 +319,19 @@ input[type="range"]:focus::-moz-range-thumb {
   font-weight: 500;
   background-color: #1f77b4;
   color: white;
+  text-align: center;
 }
 
-.modal-btn:hover {
+.modal-buttons button:hover {
   background-color: #2196f3;
 }
 
-.modal-btn.danger {
+#proceedWithoutSaveBtn {
   background-color: #d32f2f;
   color: white;
 }
 
-.modal-btn.danger:hover {
+#proceedWithoutSaveBtn:hover {
   background-color: #f44336;
 }
 
@@ -451,4 +454,54 @@ input[type="range"]:focus::-moz-range-thumb {
   outline: none;
   border-color: #666;
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Save Graph Modal Styles */
+.save-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.save-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.save-option:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.save-option input[type="checkbox"] {
+  margin: 0.25rem 0 0 0;
+  width: 18px;
+  height: 18px;
+}
+
+.save-option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.save-option span:first-child {
+  font-size: 1.1em;
+  color: #212121;
+  font-weight: 500;
+}
+
+.option-description {
+  font-size: 1em;
+  color: #666;
+}
+
+/* Remove the custom save button styles and use the standard modal button styles */
+#saveSelectedBtn, #cancelSaveBtn {
+  /* These styles are now handled by .modal-buttons button */
 } 
