@@ -14,6 +14,9 @@
    limitations under the License.
 */
 
+const APPLICATION_NAME = "graph-editor";
+const GRAPH_EDITOR_VERSION = "0.2";
+
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize slider backgrounds
@@ -32,6 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Track the current operation (clear or load)
   let modalFunction = null;
+
+  // Add this variable at the top level with other state variables
+  let isFirstSave = true;
 
   function executeOrConfirm(graphFunction) {
     hideGraphError();
@@ -53,7 +59,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Add event listeners for modal buttons
   document.getElementById('saveAndProceedBtn').addEventListener('click', () => {
-    saveGraph();
+    const graphName = document.getElementById('graphName').value || 'graph';
+    saveGraphFileToDisk(graphName);
     hideConfirmModalAndExecute();
   });
 
@@ -87,6 +94,80 @@ document.addEventListener('DOMContentLoaded', () => {
       .nodeVal('size')
       .linkWidth('thickness')
       .linkColor('color')
+      .linkLabel(link => link.label || '')  // Use a function to handle undefined labels
+      .linkCanvasObject((link, ctx, globalScale) => {
+        const source = link.source;
+        const target = link.target;
+        
+        // Draw link
+        ctx.beginPath();
+        ctx.moveTo(source.x, source.y);
+        ctx.lineTo(target.x, target.y);
+        
+        // Set line style based on selection
+        if (link === selectedLink) {
+          // Glow effect for selected links
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = link.color || '#1f77b4';
+          ctx.lineWidth = (link.thickness || 1) * 0.75;
+        } else {
+          // Normal style for unselected links
+          ctx.shadowBlur = 0;
+          ctx.lineWidth = (link.thickness || 1) * 0.5;
+        }
+        
+        // Set line dash pattern
+        switch(link.dashPattern) {
+          case 'dotted':
+            ctx.setLineDash([2, 2]);
+            break;
+          case 'dashed':
+            ctx.setLineDash([5, 5]);
+            break;
+          case 'long-dashed':
+            ctx.setLineDash([10, 3]);
+            break;
+          case 'dash-dot':
+            ctx.setLineDash([7, 2, 2, 2]);
+            break;
+          default: // 'solid'
+            ctx.setLineDash([]);
+        }
+        
+        ctx.strokeStyle = link.color || '#1f77b4';
+        ctx.stroke();
+
+        // Draw link label if it exists
+        if (link.label) {
+          const midX = (source.x + target.x) / 2;
+          const midY = (source.y + target.y) / 2;
+          
+          // Calculate angle for text rotation
+          const angle = Math.atan2(target.y - source.y, target.x - source.x);
+          
+          // Save context state
+          ctx.save();
+          
+          // Move to midpoint and rotate
+          ctx.translate(midX, midY);
+          
+          // Adjust angle to keep text readable
+          // If the angle is in the bottom half of the circle, flip the text
+          const adjustedAngle = angle + (Math.abs(angle) > Math.PI/2 ? Math.PI : 0);
+          ctx.rotate(adjustedAngle);
+          
+          // Draw text
+          const fontSize = 12/globalScale;
+          ctx.font = `italic ${fontSize}px Sans-Serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = 'black';
+          ctx.fillText(link.label, 0, -10); // Offset text above the line
+          
+          // Restore context state
+          ctx.restore();
+        }
+      })
       .onNodeClick((node, event) => handleNodeClickForLink(node, event))
       .onNodeRightClick(handleNodeRightClick)
       .onLinkClick(handleLinkClick)
@@ -100,6 +181,8 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteNodeBtn.style.opacity = '0.5';
         deleteLinkBtn.disabled = true;
         deleteLinkBtn.style.opacity = '0.5';
+        // Clear link label input
+        document.getElementById('linkLabel').value = '';
         Graph.graphData(gData);
       })
       .onNodeDragEnd(node => {
@@ -136,30 +219,28 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.textBaseline = 'middle';
         ctx.fillStyle = 'black';
         ctx.fillText(label, node.x, node.y + (node.size || 5) + fontSize);
-      })
-      .linkCanvasObject((link, ctx, globalScale) => {
-        const source = link.source;
-        const target = link.target;
-        
-        // Draw link
-        ctx.beginPath();
-        ctx.moveTo(source.x, source.y);
-        ctx.lineTo(target.x, target.y);
-        
-        // Set line style based on selection
-        if (link === selectedLink) {
-          // Glow effect for selected links
-          ctx.shadowBlur = 15;
-          ctx.shadowColor = link.color || '#1f77b4';
-          ctx.lineWidth = (link.thickness || 1) * 0.75;
-        } else {
-          // Normal style for unselected links
-          ctx.shadowBlur = 0;
-          ctx.lineWidth = (link.thickness || 1) * 0.5;
+
+        // Draw X mark if node is marked
+        if (node.exed) {
+          const size = node.size || 5;
+          const x = node.x;
+          const y = node.y;
+          
+          // Draw X mark
+          ctx.beginPath();
+          ctx.strokeStyle = 'black';
+          ctx.lineWidth = 2;
+          
+          // First diagonal
+          ctx.moveTo(x - size * 0.7, y - size * 0.7);
+          ctx.lineTo(x + size * 0.7, y + size * 0.7);
+          
+          // Second diagonal
+          ctx.moveTo(x + size * 0.7, y - size * 0.7);
+          ctx.lineTo(x - size * 0.7, y + size * 0.7);
+          
+          ctx.stroke();
         }
-        
-        ctx.strokeStyle = link.color || '#1f77b4';
-        ctx.stroke();
       })
       .d3Force('charge', d3.forceManyBody().strength(-100))
       .d3Force('link', d3.forceLink().distance(link => {
@@ -174,7 +255,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return baseDistance;
       }).strength(link => {
-        return (link.thickness || 1) * 0.1; // strength is proportional to thickness
+        switch (link.dashPattern) {
+          case 'dotted':
+            return (link.thickness || 1) * 0.02;
+          case 'dashed':
+            return (link.thickness || 1) * 0.04;
+          case 'long-dashed':
+            return (link.thickness || 1) * 0.06;
+          case 'dash-dot':
+            return (link.thickness || 1) * 0.08;
+          default:
+            return (link.thickness || 1) * 0.1;
+        }
       }))
       .d3Force('center', null) // center force is not intuitive when editing
       .d3Force('collision', d3.forceCollide(node => (node.size || 5) + 1))
@@ -230,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('saveGraphBtn').addEventListener('click', () => {
     hideGraphError();
-    saveGraph();
+    showSaveGraphModal();
   });
   document.getElementById('loadGraphBtn').addEventListener('click', () => {
     executeOrConfirm(loadGraph);
@@ -243,7 +335,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Add keyboard event handler for Delete and Backspace keys
   document.addEventListener('keydown', (event) => {
     if ((event.key === 'Delete' || event.key === 'Backspace') &&
-        document.activeElement !== document.getElementById('nodeLabel')) {
+        document.activeElement !== document.getElementById('nodeLabel') &&
+        document.activeElement !== document.getElementById('linkLabel')) {
       if (selectedLink) {
         deleteLink();
       } else if (selectedNode) {
@@ -263,6 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const proposedLabel = document.getElementById('nodeLabel').value || 'Node ' + (gData.nodes.length + 1);
       const size = parseInt(document.getElementById('nodeSize').value);
       const color = document.getElementById('colorPicker').value;
+      const exed = document.getElementById('nodeExed').checked;
       const uniqueLabel = getUniqueLabel(proposedLabel);
 
       const newNode = {
@@ -270,6 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
         label: uniqueLabel,
         color,
         size,
+        exed,
         x: lastMouseX,
         y: lastMouseY,
         fx: lastMouseX,  // Fix the node in place
@@ -288,6 +383,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Add keyboard event handler for x key
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'x' &&
+        document.activeElement !== document.getElementById('nodeLabel') &&
+        document.activeElement.tagName !== 'INPUT' &&
+        document.activeElement.tagName !== 'TEXTAREA') {
+      
+      const exedInput = document.getElementById('nodeExed');
+      const newState = !exedInput.checked;
+      exedInput.checked = newState;
+      
+      // If a node is selected, update its state too
+      if (selectedNode) {
+        selectedNode.exed = newState;
+        isGraphModified = true;
+        Graph.graphData(gData);
+      }
+    }
+  });
+
   // Color palette event handlers
   document.querySelectorAll('#colorPalette .color-option').forEach(option => {
     option.addEventListener('click', () => {
@@ -303,6 +418,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const color = e.target.value;
     applyColor(color);
     updateColorSelection(color);
+  });
+
+  // Add event listener for link label changes
+  document.getElementById('linkLabel').addEventListener('input', (e) => {
+    if (selectedLink) {
+      selectedLink.label = e.target.value;
+      isGraphModified = true;
+      // Force immediate update of the graph
+      Graph.graphData(gData);
+      Graph.d3ReheatSimulation();
+    }
+  });
+
+  // Add event listener for link thickness changes
+  document.getElementById('linkThickness').addEventListener('input', (e) => {
+    if (selectedLink) {
+      selectedLink.thickness = parseInt(e.target.value);
+      isGraphModified = true;
+      Graph.graphData(gData);
+    }
   });
 
   // Helper function to apply color to selected entity
@@ -332,6 +467,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Update color picker value
     document.getElementById('colorPicker').value = color;
+
+    // Update X checkbox color
+    const xMark = document.querySelector('.x-mark');
+    if (xMark) {
+      xMark.style.backgroundColor = color;
+    }
   }
 
   // Helper function to get contrasting text color
@@ -385,6 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const proposedLabel = document.getElementById('nodeLabel').value || 'Node ' + (gData.nodes.length + 1);
     const size = parseInt(document.getElementById('nodeSize').value);
     const color = document.getElementById('colorPicker').value;
+    const exed = document.getElementById('nodeExed').checked;
 
     const uniqueLabel = getUniqueLabel(proposedLabel);
 
@@ -411,6 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
       label: uniqueLabel,
       color,
       size,
+      exed,
       x,
       y,
       fx: x,  // Fix the node in place
@@ -522,6 +665,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Helper function to get the current pattern from the selected style canvas
+  function getCurrentPattern() {
+    const selectedStyle = document.getElementById('selectedStyle');
+    return selectedStyle ? selectedStyle.dataset.pattern || 'solid' : 'solid';
+  }
+
   function handleNodeClickForLink(node, event) {
     if (!isCreatingLink) {
       handleNodeClick(node);
@@ -541,7 +690,9 @@ document.addEventListener('DOMContentLoaded', () => {
           source: selectedNode.id,
           target: node.id,
           thickness: parseInt(document.getElementById('linkThickness').value),
-          color: document.getElementById('colorPicker').value
+          color: document.getElementById('colorPicker').value,
+          label: document.getElementById('linkLabel').value || undefined,
+          dashPattern: getCurrentPattern()
         };
         gData.links.push(newLink);
         Graph.graphData(gData);
@@ -557,7 +708,7 @@ document.addEventListener('DOMContentLoaded', () => {
           handleNodeClick(selectedNode);
         } else {
           // default is to select the link
-          handleLinkClick(newLink);
+          handleLinkClick(newLink, event);
         }
       } else {
         // If a link exists, just select the node
@@ -592,22 +743,50 @@ document.addEventListener('DOMContentLoaded', () => {
     Graph.graphData(gData);
   }
 
-  function handleLinkClick(link) {
+  function handleLinkClick(link, event) {
+    if (event) {
+      event.stopPropagation();
+    }
     selectedLink = link;
     selectedNode = null;
-    updateNodePropertiesUI();
-    updateLinkPropertiesUI();
+    
+    // Update UI to reflect link selection
+    const deleteNodeBtn = document.getElementById('deleteNodeBtn');
+    const deleteLinkBtn = document.getElementById('deleteLinkBtn');
+    deleteNodeBtn.disabled = true;
+    deleteNodeBtn.style.opacity = '0.5';
+    deleteLinkBtn.disabled = false;
+    deleteLinkBtn.style.opacity = '1';
+    
+    // Update link label input
+    document.getElementById('linkLabel').value = link.label || '';
+    
+    // Update link dash pattern
+    setSelectedStyle(link.dashPattern || 'solid');
+    
+    // Update link thickness slider
+    const thicknessSlider = document.getElementById('linkThickness');
+    thicknessSlider.value = link.thickness;
+    updateLinkThicknessPreview();
+    
+    // Update color palette
+    updateColorSelection(link.color);
+
+    // Force graph update to show label
     Graph.graphData(gData);
+    Graph.d3ReheatSimulation();
   }
 
   function updateNodePropertiesUI() {
     const labelInput = document.getElementById('nodeLabel');
     const sizeInput = document.getElementById('nodeSize');
+    const exedInput = document.getElementById('nodeExed');
     const deleteBtn = document.getElementById('deleteNodeBtn');
 
     if (selectedNode) {
       labelInput.value = selectedNode.label || '';
       sizeInput.value = selectedNode.size || 5;
+      exedInput.checked = selectedNode.exed || false;
       updateColorSelection(selectedNode.color || '#1f77b4');
       
       deleteBtn.disabled = false;
@@ -629,6 +808,15 @@ document.addEventListener('DOMContentLoaded', () => {
           Graph.graphData(gData);
         }
         updateNodeSizePreview();
+      });
+
+      // Update X mark in real-time
+      exedInput.addEventListener('change', () => {
+        if (selectedNode) {
+          selectedNode.exed = exedInput.checked;
+          isGraphModified = true;
+          Graph.graphData(gData);
+        }
       });
 
       // Update slider background when node is selected
@@ -710,28 +898,127 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function saveGraph() {
-    // Create a JSON string from the graph data
+    // Show the save graph modal
+    showSaveGraphModal();
+  }
+
+  function updateSaveSelectedButtonState() {
+    const saveGraphFile = document.getElementById('saveGraphFile');
+    const saveImageFile = document.getElementById('saveImageFile');
+    const savePdfFile = document.getElementById('savePdfFile');
+    const saveSelectedBtn = document.getElementById('saveSelectedBtn');
+    
+    if (!saveGraphFile || !saveImageFile || !savePdfFile || !saveSelectedBtn) {
+      return;
+    }
+    
+    const states = {
+      saveGraphFile: saveGraphFile.checked,
+      saveImageFile: saveImageFile.checked,
+      savePdfFile: savePdfFile.checked
+    };
+    
+    // Disable button if no options are checked
+    const shouldDisable = !(states.saveGraphFile || states.saveImageFile || states.savePdfFile);
+    saveSelectedBtn.disabled = shouldDisable;
+    saveSelectedBtn.style.opacity = shouldDisable ? '0.5' : '1';
+  }
+
+  function showSaveGraphModal() {
+    const modal = document.getElementById('saveGraphModal');
+    modal.style.display = 'flex';
+    
+    // Set JSON save option as checked by default only on first save
+    const saveGraphFile = document.getElementById('saveGraphFile');
+    if (saveGraphFile && isFirstSave) {
+      saveGraphFile.checked = true;
+      isFirstSave = false;
+    }
+    
+    // Add event listeners for the checkboxes
+    const checkboxes = ['saveGraphFile', 'saveImageFile', 'savePdfFile'];
+    checkboxes.forEach(id => {
+      const checkbox = document.getElementById(id);
+      if (checkbox) {
+        // Remove any existing listeners
+        checkbox.removeEventListener('change', updateSaveSelectedButtonState);
+        // Add the new listener
+        checkbox.addEventListener('change', function() {
+          updateSaveSelectedButtonState();
+        });
+      }
+    });
+    
+    // Set initial button state
+    updateSaveSelectedButtonState();
+  }
+
+  function hideSaveGraphModal() {
+    document.getElementById('saveGraphModal').style.display = 'none';
+  }
+
+  // Add event listeners for save graph modal buttons
+  document.getElementById('saveSelectedBtn').addEventListener('click', handleSaveSelected);
+  document.getElementById('cancelSaveBtn').addEventListener('click', hideSaveGraphModal);
+
+  function handleSaveSelected() {
+    const saveGraphFile = document.getElementById('saveGraphFile').checked;
+    const saveImageFile = document.getElementById('saveImageFile').checked;
+    const savePdfFile = document.getElementById('savePdfFile').checked;
+
+    if (!saveGraphFile && !saveImageFile && !savePdfFile) {
+      showGraphError('Please select at least one save option');
+      return;
+    }
+
     const graphName = document.getElementById('graphName').value || 'graph';
+
+    if (saveGraphFile) {
+      saveGraphFileToDisk(graphName);
+      isGraphModified = false; // Only clear the modified flag if saving as JSON
+    }
+
+    if (saveImageFile) {
+      saveGraphAsImage(graphName);
+    }
+
+    if (savePdfFile) {
+      saveGraphAsPdf(graphName);
+    }
+
+    hideSaveGraphModal();
+  }
+
+  function saveGraphFileToDisk(graphName) {
     const graphData = {
       metadata: {
-        application: "graph-editor",
-        version: "0.1",
-        timestamp: new Date().toISOString().split('.')[0] + 'Z', // ISO-8601 without milliseconds, UTC
+        application: APPLICATION_NAME,
+        version: GRAPH_EDITOR_VERSION,
+        timestamp: new Date().toISOString().split('.')[0] + 'Z',  // Keep UTC for metadata
         name: graphName
       },
-      nodes: gData.nodes.map(node => ({
-        id: node.id,
-        label: node.label,
-        color: node.color,
-        size: node.size,
-        x: node.x,
-        y: node.y
-      })),
+      nodes: gData.nodes.map(node => {
+        const nodeData = {
+          id: node.id,
+          label: node.label,
+          color: node.color,
+          size: node.size,
+          x: node.x,
+          y: node.y
+        };
+        // Only include exed if it's true
+        if (node.exed) {
+          nodeData.exed = true;
+        }
+        return nodeData;
+      }),
       links: gData.links.map(link => ({
         source: link.source.id,
         target: link.target.id,
         thickness: link.thickness,
-        color: link.color
+        color: link.color,
+        label: link.label,
+        dashPattern: link.dashPattern
       }))
     };
 
@@ -739,24 +1026,141 @@ document.addEventListener('DOMContentLoaded', () => {
     const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
 
-    // Create a temporary link element to trigger the save dialog
+    // Generate date stamp in local time
+    const now = new Date();
+    const dateStamp = now.getFullYear() +
+      String(now.getMonth() + 1).padStart(2, '0') +
+      String(now.getDate()).padStart(2, '0') + 'T' +
+      String(now.getHours()).padStart(2, '0') +
+      String(now.getMinutes()).padStart(2, '0') +
+      String(now.getSeconds()).padStart(2, '0');
+
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${graphName}.json`; // Use the graph name
+    a.download = `${graphName}-${dateStamp}.graph`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
 
-    // Reset modification flag after saving
-    isGraphModified = false;
+  function saveGraphAsImage(graphName) {
+    // Get the graph container
+    const graphContainer = document.getElementById('graph');
+    
+    // Store and remove the pattern canvases
+    const styleOptions = document.getElementById('styleOptions');
+    const patternCanvases = Array.from(styleOptions.querySelectorAll('canvas'));
+    patternCanvases.forEach(canvas => canvas.remove());
+    
+    // Use html2canvas to capture the graph
+    html2canvas(graphContainer, {
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff'
+    }).then(canvas => {
+      // Restore the pattern canvases
+      patternCanvases.forEach(canvas => styleOptions.appendChild(canvas));
+      
+      // Generate date stamp in local time
+      const now = new Date();
+      const dateStamp = now.getFullYear() +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0') + 'T' +
+        String(now.getHours()).padStart(2, '0') +
+        String(now.getMinutes()).padStart(2, '0') +
+        String(now.getSeconds()).padStart(2, '0');
+      
+      // Convert canvas to blob
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${graphName}-${dateStamp}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 'image/png');
+    });
+  }
+
+  function saveGraphAsPdf(graphName) {
+    // Get the graph container
+    const graphContainer = document.getElementById('graph');
+    
+    // Store and remove the pattern canvases
+    const styleOptions = document.getElementById('styleOptions');
+    const patternCanvases = Array.from(styleOptions.querySelectorAll('canvas'));
+    patternCanvases.forEach(canvas => canvas.remove());
+    
+    // Use html2canvas to capture the graph
+    html2canvas(graphContainer, {
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      willReadFrequently: true
+    }).then(canvas => {
+      // Restore the pattern canvases
+      patternCanvases.forEach(canvas => styleOptions.appendChild(canvas));
+      
+      // Generate date stamp in local time
+      const now = new Date();
+      const dateStamp = now.getFullYear() +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0') + 'T' +
+        String(now.getHours()).padStart(2, '0') +
+        String(now.getMinutes()).padStart(2, '0') +
+        String(now.getSeconds()).padStart(2, '0');
+      
+      // Create PDF using the global jspdf object
+      const { jsPDF } = window.jspdf;
+      
+      // Calculate dimensions to fit on A4 landscape with some padding
+      const a4Width = 297; // A4 width in mm
+      const a4Height = 210; // A4 height in mm
+      const padding = 10; // padding in mm
+      
+      // Calculate scale to fit the canvas on A4 while maintaining aspect ratio
+      const scale = Math.min(
+        (a4Width - padding * 2) / canvas.width,
+        (a4Height - padding * 2) / canvas.height
+      );
+      
+      // Calculate dimensions after scaling
+      const scaledWidth = canvas.width * scale;
+      const scaledHeight = canvas.height * scale;
+      
+      // Calculate centering offsets
+      const xOffset = (a4Width - scaledWidth) / 2;
+      const yOffset = (a4Height - scaledHeight) / 2;
+      
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      // Add the image to the PDF with calculated dimensions and position
+      pdf.addImage(
+        canvas.toDataURL('image/png'),
+        'PNG',
+        xOffset,
+        yOffset,
+        scaledWidth,
+        scaledHeight
+      );
+      
+      // Save the PDF
+      pdf.save(`${graphName}-${dateStamp}.pdf`);
+    });
   }
 
   function loadGraph() {
     // Create a file input element
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.json';
+    input.accept = '.graph,.json';  // Accept both .graph and .json for backward compatibility
     
     input.onchange = e => {
       const file = e.target.files[0];
@@ -816,7 +1220,8 @@ document.addEventListener('DOMContentLoaded', () => {
         x: nodeData.x,
         y: nodeData.y,
         fx: nodeData.x,  // Fix the node in its loaded position
-        fy: nodeData.y   // Fix the node in its loaded position
+        fy: nodeData.y,  // Fix the node in its loaded position
+        exed: nodeData.exed || false
       });
     });
 
@@ -830,7 +1235,9 @@ document.addEventListener('DOMContentLoaded', () => {
           source: sourceNode,
           target: targetNode,
           thickness: linkData.thickness,
-          color: linkData.color
+          color: linkData.color,
+          label: linkData.label,
+          dashPattern: linkData.dashPattern
         });
       }
     });
@@ -962,4 +1369,138 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('mousedown', dismissHelpBanner, true);
   window.addEventListener('keydown', dismissHelpBanner, true);
   window.addEventListener('touchstart', dismissHelpBanner, true);
+
+  /**
+   * Draws a line pattern on a canvas element.
+   * @param {HTMLCanvasElement} canvas - The canvas element to draw on
+   * @param {string} pattern - The pattern to draw. Must be one of: 'solid', 'dotted', 'dashed', 'long-dashed', 'dash-dot'
+   * @returns {void}
+   */
+  function drawPattern(canvas, pattern) {
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    
+    // Clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw the pattern
+    ctx.beginPath();
+    ctx.setLineDash(pattern === 'dotted' ? [1, 3] :
+                   pattern === 'dashed' ? [6, 4] :
+                   pattern === 'long-dashed' ? [12, 4] :
+                   pattern === 'dash-dot' ? [8, 3, 2, 3] : []);
+    ctx.moveTo(10, canvas.height/2);
+    ctx.lineTo(canvas.width - 10, canvas.height/2);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  /**
+   * Updates the selected style canvas with a new pattern.
+   * @param {string} pattern - The pattern to set. Must be one of: 'solid', 'dotted', 'dashed', 'long-dashed', 'dash-dot'
+   * @returns {void}
+   */
+  function setSelectedStyle(pattern) {
+    const selectedStyle = document.getElementById('selectedStyle');
+    if (!selectedStyle) return;
+    
+    drawPattern(selectedStyle, pattern);
+    selectedStyle.dataset.pattern = pattern;
+  }
+
+  /**
+   * Initializes a pattern option canvas with click handling.
+   * @param {HTMLCanvasElement} canvas - The canvas element to initialize
+   * @param {string} pattern - The pattern to draw. Must be one of: 'solid', 'dotted', 'dashed', 'long-dashed', 'dash-dot'
+   * @returns {void}
+   */
+  function initPatternOption(canvas, pattern) {
+    drawPattern(canvas, pattern);
+    canvas.dataset.pattern = pattern;
+    
+    // Handle click on option
+    canvas.onclick = function(e) {
+      e.stopPropagation();
+      setSelectedStyle(pattern);
+      document.getElementById('styleOptions').style.display = 'none';
+      
+      // Update selected link if one is selected
+      if (selectedLink) {
+        selectedLink.dashPattern = pattern;
+        isGraphModified = true;
+        Graph.graphData(gData);
+      }
+    };
+  }
+
+  /**
+   * Initializes the line pattern dropdown functionality.
+   * This includes:
+   * - Setting up the selected style button
+   * - Initializing pattern option canvases
+   * - Handling window resize events
+   * - Setting up click-outside behavior
+   * @returns {void}
+   */
+  function initLinePatternDropdown() {
+    // Initialize selected style canvas
+    const selectedStyle = document.getElementById('selectedStyle');
+    const selectedStyleBtn = document.getElementById('selectedStyleBtn');
+    if (selectedStyle && selectedStyleBtn) {
+      // Set initial pattern
+      setSelectedStyle('solid');
+      
+      // Handle click on button
+      selectedStyleBtn.onclick = function(e) {
+        e.stopPropagation();
+        const options = document.getElementById('styleOptions');
+        
+        if (options.style.display === 'none') {
+          // Show options first so we can get their dimensions
+          options.style.display = 'block';
+          
+          // Initialize all option canvases
+          document.querySelectorAll('#styleOptions canvas').forEach(canvas => {
+            initPatternOption(canvas, canvas.dataset.pattern);
+          });
+        } else {
+          options.style.display = 'none';
+        }
+      };
+    }
+
+    // Initialize option canvases
+    document.querySelectorAll('#styleOptions canvas').forEach(canvas => {
+      initPatternOption(canvas, canvas.dataset.pattern);
+    });
+
+    // Handle window resize
+    window.addEventListener('resize', function() {
+      // Redraw all canvases when window is resized
+      setSelectedStyle(getCurrentPattern());
+      document.querySelectorAll('#styleOptions canvas').forEach(canvas => {
+        initPatternOption(canvas, canvas.dataset.pattern);
+      });
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      const dropdown = document.querySelector('.line-pattern-dropdown');
+      if (!dropdown.contains(e.target)) {
+        document.getElementById('styleOptions').style.display = 'none';
+      }
+    });
+  }
+
+  // Make sure we initialize after DOM is loaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      initLinePatternDropdown();
+    });
+  } else {
+    initLinePatternDropdown();
+  }
 }); 

@@ -17,8 +17,18 @@
 <html>
 <head>
   <link rel="stylesheet" href="graph-editor-style.css">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <!-- TODO: Implement Subresource Integrity (SRI) checks for external scripts
+       and/or package the web app with known versions of these scripts to prevent
+       tampering and incompatibility with updated versions:
+       - d3.v7.min.js
+       - force-graph
+       - html2canvas
+       - jspdf -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://unpkg.com/force-graph"></script>
-  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="graph-editor-script.js"></script>
 </head>
 <body>
@@ -32,8 +42,12 @@
     <div id="sidebar">
       <div class="tool-section">
         <h3><center>Node</center></h3>
-        <div class="form-group">
+        <div class="form-group" style="display: grid; grid-template-columns: 1fr auto; gap: 5px; align-items: center;">
           <input type="text" id="nodeLabel" placeholder="Node label">
+          <label class="x-checkbox" title="Mark node with X">
+            <input type="checkbox" id="nodeExed">
+            <span class="x-mark"></span>
+          </label>
         </div>
         <div class="form-group">
           <label for="nodeSize">Size:</label>
@@ -47,6 +61,24 @@
 
       <div class="tool-section">
         <h3><center>Link</center></h3>
+        <div class="form-group">
+          <input type="text" id="linkLabel" placeholder="Link label">
+        </div>
+        <div class="form-group">
+          <label for="selectedStyleBtn">Style:</label>
+          <div class="line-pattern-dropdown">
+            <button type="button" id="selectedStyleBtn" class="selected-style-btn">
+              <canvas id="selectedStyle" class="selected-style"></canvas>
+            </button>
+            <div class="style-options" id="styleOptions" style="display: none;">
+              <canvas data-pattern="solid"></canvas>
+              <canvas data-pattern="dotted"></canvas>
+              <canvas data-pattern="dashed"></canvas>
+              <canvas data-pattern="long-dashed"></canvas>
+              <canvas data-pattern="dash-dot"></canvas>
+            </div>
+          </div>
+        </div>
         <div class="form-group">
           <label for="linkThickness">Strength:</label>
           <input type="range" id="linkThickness" min="1" max="10" value="1">
@@ -102,12 +134,48 @@
   </div>
   <div id="confirmModal" class="modal" style="display: none;">
     <div class="modal-content">
-      <h3 id="modalTitle">You have unsaved changes.</h3>
-      <p>What would you like to do?</p>
+      <h2>Unsaved Changes</h2>
+      <p>You have unsaved changes. What would you like to do?</p>
       <div class="modal-buttons">
-        <button id="saveAndProceedBtn" class="modal-btn">Save & Proceed</button>
-        <button id="proceedWithoutSaveBtn" class="modal-btn danger">Proceed without Saving</button>
-        <button id="cancelBtn" class="modal-btn">Cancel</button>
+        <button id="saveAndProceedBtn">Save and Proceed</button>
+        <button id="proceedWithoutSaveBtn">Proceed Without Saving</button>
+        <button id="cancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Graph Modal -->
+  <div id="saveGraphModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h2>Save Graph</h2>
+      <p>The location of saved files is determined by your web browser's settings.</p>
+      <p>Choose what to save:</p>
+      <div class="save-options">
+        <label class="save-option">
+          <input type="checkbox" id="saveGraphFile" checked>
+          <div class="save-option-content">
+            <span>Graph File (.graph)</span>
+            <span class="option-description">Save the graph data for later editing</span>
+          </div>
+        </label>
+        <label class="save-option">
+          <input type="checkbox" id="saveImageFile">
+          <div class="save-option-content">
+            <span>Image File (.png)</span>
+            <span class="option-description">Save a screenshot of the current view</span>
+          </div>
+        </label>
+        <label class="save-option">
+          <input type="checkbox" id="savePdfFile">
+          <div class="save-option-content">
+            <span>PDF File (.pdf)</span>
+            <span class="option-description">Save a PDF of the current view</span>
+          </div>
+        </label>
+      </div>
+      <div class="modal-buttons">
+        <button id="saveSelectedBtn">Save Selected</button>
+        <button id="cancelSaveBtn">Cancel</button>
       </div>
     </div>
   </div>
