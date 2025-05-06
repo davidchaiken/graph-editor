@@ -52,6 +52,19 @@
           <input type="text" id="linkLabel" placeholder="Link label">
         </div>
         <div class="form-group">
+          <label for="linkDash">Style:</label>
+          <div class="line-pattern-dropdown" id="lineStyleDropdown">
+            <canvas id="selectedStyle" class="selected-style"></canvas>
+            <div class="style-options" id="styleOptions" style="display: none;">
+              <canvas data-pattern="solid"></canvas>
+              <canvas data-pattern="dotted"></canvas>
+              <canvas data-pattern="dashed"></canvas>
+              <canvas data-pattern="long-dashed"></canvas>
+              <canvas data-pattern="dash-dot"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
           <label for="linkThickness">Strength:</label>
           <input type="range" id="linkThickness" min="1" max="10" value="1">
         </div>
