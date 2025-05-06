@@ -431,4 +431,24 @@ input[type="range"]:focus::-moz-range-thumb {
 
 .style-options canvas:hover {
   background: #f0f0f0;
+}
+
+.selected-style-btn {
+  width: 100%;
+  padding: 0;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+  display: block;
+  border-radius: 4px;
+}
+
+.selected-style-btn:hover {
+  border-color: #999;
+}
+
+.selected-style-btn:focus {
+  outline: none;
+  border-color: #666;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
 } 

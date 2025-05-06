@@ -371,26 +371,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Add event listener for link thickness changes
   document.getElementById('linkThickness').addEventListener('input', (e) => {
-    console.log('Link thickness changed:', e.target.value);
     if (selectedLink) {
       selectedLink.thickness = parseInt(e.target.value);
       isGraphModified = true;
       Graph.graphData(gData);
     }
   });
-
-  // Add event listener for link dash pattern changes
-  const dashSelect = document.getElementById('linkDash');
-  if (dashSelect) {
-    dashSelect.addEventListener('change', (e) => {
-      console.log('Link dash pattern changed:', e.target.value);
-      if (selectedLink) {
-        selectedLink.dashPattern = e.target.value;
-        isGraphModified = true;
-        Graph.graphData(gData);
-      }
-    });
-  }
 
   // Helper function to apply color to selected entity
   function applyColor(color) {
@@ -609,6 +595,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Helper function to get the current pattern from the selected style canvas
+  function getCurrentPattern() {
+    const selectedStyle = document.getElementById('selectedStyle');
+    return selectedStyle ? selectedStyle.dataset.pattern || 'solid' : 'solid';
+  }
+
   function handleNodeClickForLink(node, event) {
     if (!isCreatingLink) {
       handleNodeClick(node);
@@ -623,15 +615,6 @@ document.addEventListener('DOMContentLoaded', () => {
       );
 
       if (!existingLink) {
-        // Get the current pattern from the selected style canvas
-        const selectedStyle = document.getElementById('selectedStyle');
-        let currentPattern = 'solid';  // Default to solid
-        if (selectedStyle) {
-          // Get the pattern from the canvas's dataset
-          currentPattern = selectedStyle.dataset.pattern || 'solid';
-          console.log('Creating new link with pattern:', currentPattern, 'from dataset:', selectedStyle.dataset);
-        }
-
         // Create new link with current properties from the Link tool
         const newLink = {
           source: selectedNode.id,
@@ -639,9 +622,8 @@ document.addEventListener('DOMContentLoaded', () => {
           thickness: parseInt(document.getElementById('linkThickness').value),
           color: document.getElementById('colorPicker').value,
           label: document.getElementById('linkLabel').value || undefined,
-          dashPattern: currentPattern
+          dashPattern: getCurrentPattern()
         };
-        console.log('Created new link with properties:', newLink);
         gData.links.push(newLink);
         Graph.graphData(gData);
 
@@ -710,33 +692,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('linkLabel').value = link.label || '';
     
     // Update link dash pattern
-    const selectedStyle = document.getElementById('selectedStyle');
-    if (selectedStyle) {
-      const ctx = selectedStyle.getContext('2d');
-      const rect = selectedStyle.getBoundingClientRect();
-      selectedStyle.width = rect.width;
-      selectedStyle.height = rect.height;
-      
-      // Get the current pattern from the link
-      const pattern = link.dashPattern || 'solid';
-      console.log('Updating selected style to pattern:', pattern);
-      
-      // Draw the current pattern
-      ctx.beginPath();
-      ctx.setLineDash(pattern === 'dotted' ? [1, 3] :
-                     pattern === 'dashed' ? [6, 4] :
-                     pattern === 'long-dashed' ? [12, 4] :
-                     pattern === 'dash-dot' ? [8, 3, 2, 3] : []);
-      ctx.moveTo(10, rect.height/2);
-      ctx.lineTo(rect.width - 10, rect.height/2);
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Store the pattern in the canvas dataset
-      selectedStyle.dataset.pattern = pattern;
-      console.log('Stored pattern in selected style dataset:', selectedStyle.dataset.pattern);
-    }
+    setSelectedStyle(link.dashPattern || 'solid');
     
     // Update link thickness slider
     const thicknessSlider = document.getElementById('linkThickness');
@@ -1118,74 +1074,91 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('keydown', dismissHelpBanner, true);
   window.addEventListener('touchstart', dismissHelpBanner, true);
 
-  function createLink(source, target) {
-    const link = {
-      source: source,
-      target: target,
-      thickness: parseInt(document.getElementById('linkThickness').value),
-      color: document.getElementById('colorPicker').value,
-      label: document.getElementById('linkLabel').value || undefined,
-      dashPattern: document.getElementById('linkDash').value
-    };
-    gData.links.push(link);
-    isGraphModified = true;
-    Graph.graphData(gData);
-    return link;
+  /**
+   * Draws a line pattern on a canvas element.
+   * @param {HTMLCanvasElement} canvas - The canvas element to draw on
+   * @param {string} pattern - The pattern to draw. Must be one of: 'solid', 'dotted', 'dashed', 'long-dashed', 'dash-dot'
+   * @returns {void}
+   */
+  function drawPattern(canvas, pattern) {
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    
+    // Clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw the pattern
+    ctx.beginPath();
+    ctx.setLineDash(pattern === 'dotted' ? [1, 3] :
+                   pattern === 'dashed' ? [6, 4] :
+                   pattern === 'long-dashed' ? [12, 4] :
+                   pattern === 'dash-dot' ? [8, 3, 2, 3] : []);
+    ctx.moveTo(10, canvas.height/2);
+    ctx.lineTo(canvas.width - 10, canvas.height/2);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.stroke();
   }
 
-  // Initialize custom line pattern dropdown
-  function initLinePatternDropdown() {
-    console.log('Initializing line pattern dropdown...');
+  /**
+   * Updates the selected style canvas with a new pattern.
+   * @param {string} pattern - The pattern to set. Must be one of: 'solid', 'dotted', 'dashed', 'long-dashed', 'dash-dot'
+   * @returns {void}
+   */
+  function setSelectedStyle(pattern) {
+    const selectedStyle = document.getElementById('selectedStyle');
+    if (!selectedStyle) return;
     
-    const patterns = {
-      'solid': [],
-      'dotted': [1, 3],
-      'dashed': [6, 4],
-      'long-dashed': [12, 4],
-      'dash-dot': [8, 3, 2, 3]
+    drawPattern(selectedStyle, pattern);
+    selectedStyle.dataset.pattern = pattern;
+  }
+
+  /**
+   * Initializes a pattern option canvas with click handling.
+   * @param {HTMLCanvasElement} canvas - The canvas element to initialize
+   * @param {string} pattern - The pattern to draw. Must be one of: 'solid', 'dotted', 'dashed', 'long-dashed', 'dash-dot'
+   * @returns {void}
+   */
+  function initPatternOption(canvas, pattern) {
+    drawPattern(canvas, pattern);
+    canvas.dataset.pattern = pattern;
+    
+    // Handle click on option
+    canvas.onclick = function(e) {
+      e.stopPropagation();
+      setSelectedStyle(pattern);
+      document.getElementById('styleOptions').style.display = 'none';
+      
+      // Update selected link if one is selected
+      if (selectedLink) {
+        selectedLink.dashPattern = pattern;
+        isGraphModified = true;
+        Graph.graphData(gData);
+      }
     };
+  }
 
-    function drawLine(canvas, pattern) {
-      console.log('Drawing line pattern:', pattern, 'on canvas:', canvas);
-      const ctx = canvas.getContext('2d');
-      
-      // Set canvas size to match display size
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = rect.height;
-      
-      // Clear the canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Draw the line pattern
-      ctx.beginPath();
-      ctx.setLineDash(patterns[pattern]);
-      ctx.moveTo(10, canvas.height/2);
-      ctx.lineTo(canvas.width - 10, canvas.height/2);
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Store the pattern in the canvas dataset
-      canvas.dataset.pattern = pattern;
-      console.log('Stored pattern in canvas dataset:', canvas.dataset.pattern);
-    }
-
+  /**
+   * Initializes the line pattern dropdown functionality.
+   * This includes:
+   * - Setting up the selected style button
+   * - Initializing pattern option canvases
+   * - Handling window resize events
+   * - Setting up click-outside behavior
+   * @returns {void}
+   */
+  function initLinePatternDropdown() {
     // Initialize selected style canvas
     const selectedStyle = document.getElementById('selectedStyle');
-    console.log('Selected style element:', selectedStyle);
-    
-    if (selectedStyle) {
-      // Set initial size and draw
-      const rect = selectedStyle.getBoundingClientRect();
-      selectedStyle.width = rect.width;
-      selectedStyle.height = rect.height;
-      drawLine(selectedStyle, 'solid');
-      selectedStyle.dataset.pattern = 'solid';
+    const selectedStyleBtn = document.getElementById('selectedStyleBtn');
+    if (selectedStyle && selectedStyleBtn) {
+      // Set initial pattern
+      setSelectedStyle('solid');
       
-      // Handle click on selected style
-      selectedStyle.onclick = function(e) {
-        console.log('Selected style clicked');
+      // Handle click on button
+      selectedStyleBtn.onclick = function(e) {
         e.stopPropagation();
         const options = document.getElementById('styleOptions');
         
@@ -1193,12 +1166,9 @@ document.addEventListener('DOMContentLoaded', () => {
           // Show options first so we can get their dimensions
           options.style.display = 'block';
           
-          // When opening the dropdown, ensure all option canvases are properly sized and drawn
+          // Initialize all option canvases
           document.querySelectorAll('#styleOptions canvas').forEach(canvas => {
-            const optionRect = canvas.getBoundingClientRect();
-            canvas.width = optionRect.width;
-            canvas.height = optionRect.height;
-            drawLine(canvas, canvas.dataset.pattern);
+            initPatternOption(canvas, canvas.dataset.pattern);
           });
         } else {
           options.style.display = 'none';
@@ -1207,51 +1177,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Initialize option canvases
-    const optionCanvases = document.querySelectorAll('#styleOptions canvas');
-    console.log('Found option canvases:', optionCanvases.length);
-    
-    optionCanvases.forEach(canvas => {
-      const pattern = canvas.dataset.pattern;
-      console.log('Initializing option canvas for pattern:', pattern);
-      
-      // Set initial size and draw
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = rect.height;
-      drawLine(canvas, pattern);
-      
-      // Handle click on option
-      canvas.onclick = function(e) {
-        console.log('Option clicked:', pattern);
-        e.stopPropagation();
-        drawLine(selectedStyle, pattern);
-        selectedStyle.dataset.pattern = pattern;
-        console.log('Updated selected style pattern to:', pattern);
-        document.getElementById('styleOptions').style.display = 'none';
-        
-        // Update selected link if one is selected
-        if (selectedLink) {
-          console.log('Updating selected link pattern to:', pattern);
-          selectedLink.dashPattern = pattern;
-          isGraphModified = true;
-          Graph.graphData(gData);
-        }
-      };
+    document.querySelectorAll('#styleOptions canvas').forEach(canvas => {
+      initPatternOption(canvas, canvas.dataset.pattern);
     });
 
     // Handle window resize
     window.addEventListener('resize', function() {
       // Redraw all canvases when window is resized
-      const currentPattern = selectedStyle.dataset.pattern || 'solid';
-      drawLine(selectedStyle, currentPattern);
+      setSelectedStyle(getCurrentPattern());
       document.querySelectorAll('#styleOptions canvas').forEach(canvas => {
-        drawLine(canvas, canvas.dataset.pattern);
+        initPatternOption(canvas, canvas.dataset.pattern);
       });
     });
 
     // Close dropdown when clicking outside
     document.addEventListener('click', function(e) {
-      const dropdown = document.getElementById('lineStyleDropdown');
+      const dropdown = document.querySelector('.line-pattern-dropdown');
       if (!dropdown.contains(e.target)) {
         document.getElementById('styleOptions').style.display = 'none';
       }
@@ -1260,13 +1201,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Make sure we initialize after DOM is loaded
   if (document.readyState === 'loading') {
-    console.log('Document still loading, adding DOMContentLoaded listener');
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('DOMContentLoaded fired, initializing dropdown');
       initLinePatternDropdown();
     });
   } else {
-    console.log('Document already loaded, initializing dropdown immediately');
     initLinePatternDropdown();
   }
 }); 
