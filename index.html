@@ -42,8 +42,12 @@
     <div id="sidebar">
       <div class="tool-section">
         <h3><center>Node</center></h3>
-        <div class="form-group">
+        <div class="form-group" style="display: grid; grid-template-columns: 1fr auto; gap: 5px; align-items: center;">
           <input type="text" id="nodeLabel" placeholder="Node label">
+          <label class="x-checkbox" title="Mark node with X">
+            <input type="checkbox" id="nodeExed">
+            <span class="x-mark"></span>
+          </label>
         </div>
         <div class="form-group">
           <label for="nodeSize">Size:</label>

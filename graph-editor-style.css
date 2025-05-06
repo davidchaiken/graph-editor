@@ -55,7 +55,7 @@ body {
 
 .tool-section h3 {
   margin-top: 0;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
   color: #212121;
   font-size: 0.95em;
   font-weight: 500;
@@ -65,6 +65,15 @@ body {
 
 .form-group {
   margin-bottom: 10px;
+}
+
+.form-group input[type="text"] {
+  padding: 5px;
+  box-sizing: border-box;
+  border: 1px solid #e0e0e0;
+  border-radius: 3px;
+  font-size: 0.9em;
+  height: 24px;
 }
 
 label {
@@ -479,9 +488,38 @@ input[type="range"]:focus::-moz-range-thumb {
 }
 
 .save-option input[type="checkbox"] {
-  margin: 0.25rem 0 0 0;
+  appearance: none;
+  -webkit-appearance: none;
   width: 18px;
   height: 18px;
+  border: 1px solid #e0e0e0;
+  border-radius: 3px;
+  background-color: white;
+  cursor: pointer;
+  position: relative;
+  margin: 0.25rem 0 0 0;
+}
+
+.save-option input[type="checkbox"]:checked {
+  background-color: #1f77b4;
+  border-color: #1f77b4;
+}
+
+.save-option:hover input[type="checkbox"]:checked {
+  background-color: #2196f3;
+  border-color: #2196f3;
+}
+
+.save-option input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 3px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .save-option-content {
@@ -501,7 +539,80 @@ input[type="range"]:focus::-moz-range-thumb {
   color: #666;
 }
 
-/* Remove the custom save button styles and use the standard modal button styles */
-#saveSelectedBtn, #cancelSaveBtn {
-  /* These styles are now handled by .modal-buttons button */
+#saveGraphModal input[type="checkbox"] {
+  accent-color: #1f77b4;
+}
+
+#saveGraphModal input[type="checkbox"]:focus-visible {
+  outline: 2px solid rgba(33, 150, 243, 0.2);
+  outline-offset: 2px;
+}
+
+.x-checkbox {
+  position: relative;
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  transform: translateY(2px);
+}
+
+.x-checkbox input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.x-checkbox .x-mark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  background-color: #1f77b4;
+  border: none;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.x-checkbox .x-mark::before,
+.x-checkbox .x-mark::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 2px;
+  background-color: black;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.x-checkbox .x-mark::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.x-checkbox .x-mark::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.x-checkbox input:checked + .x-mark::before,
+.x-checkbox input:checked + .x-mark::after {
+  opacity: 1;
+}
+
+.x-checkbox:hover .x-mark {
+  filter: brightness(1.2);
+}
+
+.x-checkbox input:focus + .x-mark {
+  box-shadow: 0 0 0 2px rgba(31, 119, 180, 0.2);
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: #1f77b4;
+  box-shadow: 0 0 0 2px rgba(31, 119, 180, 0.2);
 } 

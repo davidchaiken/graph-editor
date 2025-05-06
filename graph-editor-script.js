@@ -216,6 +216,28 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.textBaseline = 'middle';
         ctx.fillStyle = 'black';
         ctx.fillText(label, node.x, node.y + (node.size || 5) + fontSize);
+
+        // Draw X mark if node is marked
+        if (node.exed) {
+          const size = node.size || 5;
+          const x = node.x;
+          const y = node.y;
+          
+          // Draw X mark
+          ctx.beginPath();
+          ctx.strokeStyle = 'black';
+          ctx.lineWidth = 2;
+          
+          // First diagonal
+          ctx.moveTo(x - size * 0.7, y - size * 0.7);
+          ctx.lineTo(x + size * 0.7, y + size * 0.7);
+          
+          // Second diagonal
+          ctx.moveTo(x + size * 0.7, y - size * 0.7);
+          ctx.lineTo(x - size * 0.7, y + size * 0.7);
+          
+          ctx.stroke();
+        }
       })
       .d3Force('charge', d3.forceManyBody().strength(-100))
       .d3Force('link', d3.forceLink().distance(link => {
@@ -230,7 +252,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return baseDistance;
       }).strength(link => {
-        return (link.thickness || 1) * 0.1; // strength is proportional to thickness
+        switch (link.dashPattern) {
+          case 'dotted':
+            return (link.thickness || 1) * 0.02;
+          case 'dashed':
+            return (link.thickness || 1) * 0.04;
+          case 'long-dashed':
+            return (link.thickness || 1) * 0.06;
+          case 'dash-dot':
+            return (link.thickness || 1) * 0.08;
+          default:
+            return (link.thickness || 1) * 0.1;
+        }
       }))
       .d3Force('center', null) // center force is not intuitive when editing
       .d3Force('collision', d3.forceCollide(node => (node.size || 5) + 1))
@@ -320,6 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const proposedLabel = document.getElementById('nodeLabel').value || 'Node ' + (gData.nodes.length + 1);
       const size = parseInt(document.getElementById('nodeSize').value);
       const color = document.getElementById('colorPicker').value;
+      const exed = document.getElementById('nodeExed').checked;
       const uniqueLabel = getUniqueLabel(proposedLabel);
 
       const newNode = {
@@ -327,6 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
         label: uniqueLabel,
         color,
         size,
+        exed,
         x: lastMouseX,
         y: lastMouseY,
         fx: lastMouseX,  // Fix the node in place
@@ -342,6 +377,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Select the newly created node
       handleNodeClick(newNode);
+    }
+  });
+
+  // Add keyboard event handler for x key
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'x' &&
+        document.activeElement !== document.getElementById('nodeLabel') &&
+        document.activeElement.tagName !== 'INPUT' &&
+        document.activeElement.tagName !== 'TEXTAREA') {
+      
+      const exedInput = document.getElementById('nodeExed');
+      const newState = !exedInput.checked;
+      exedInput.checked = newState;
+      
+      // If a node is selected, update its state too
+      if (selectedNode) {
+        selectedNode.exed = newState;
+        isGraphModified = true;
+        Graph.graphData(gData);
+      }
     }
   });
 
@@ -409,6 +464,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Update color picker value
     document.getElementById('colorPicker').value = color;
+
+    // Update X checkbox color
+    const xMark = document.querySelector('.x-mark');
+    if (xMark) {
+      xMark.style.backgroundColor = color;
+    }
   }
 
   // Helper function to get contrasting text color
@@ -462,6 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const proposedLabel = document.getElementById('nodeLabel').value || 'Node ' + (gData.nodes.length + 1);
     const size = parseInt(document.getElementById('nodeSize').value);
     const color = document.getElementById('colorPicker').value;
+    const exed = document.getElementById('nodeExed').checked;
 
     const uniqueLabel = getUniqueLabel(proposedLabel);
 
@@ -488,6 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
       label: uniqueLabel,
       color,
       size,
+      exed,
       x,
       y,
       fx: x,  // Fix the node in place
@@ -714,11 +777,13 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateNodePropertiesUI() {
     const labelInput = document.getElementById('nodeLabel');
     const sizeInput = document.getElementById('nodeSize');
+    const exedInput = document.getElementById('nodeExed');
     const deleteBtn = document.getElementById('deleteNodeBtn');
 
     if (selectedNode) {
       labelInput.value = selectedNode.label || '';
       sizeInput.value = selectedNode.size || 5;
+      exedInput.checked = selectedNode.exed || false;
       updateColorSelection(selectedNode.color || '#1f77b4');
       
       deleteBtn.disabled = false;
@@ -740,6 +805,15 @@ document.addEventListener('DOMContentLoaded', () => {
           Graph.graphData(gData);
         }
         updateNodeSizePreview();
+      });
+
+      // Update X mark in real-time
+      exedInput.addEventListener('change', () => {
+        if (selectedNode) {
+          selectedNode.exed = exedInput.checked;
+          isGraphModified = true;
+          Graph.graphData(gData);
+        }
       });
 
       // Update slider background when node is selected
@@ -920,14 +994,21 @@ document.addEventListener('DOMContentLoaded', () => {
         timestamp: new Date().toISOString().split('.')[0] + 'Z',  // Keep UTC for metadata
         name: graphName
       },
-      nodes: gData.nodes.map(node => ({
-        id: node.id,
-        label: node.label,
-        color: node.color,
-        size: node.size,
-        x: node.x,
-        y: node.y
-      })),
+      nodes: gData.nodes.map(node => {
+        const nodeData = {
+          id: node.id,
+          label: node.label,
+          color: node.color,
+          size: node.size,
+          x: node.x,
+          y: node.y
+        };
+        // Only include exed if it's true
+        if (node.exed) {
+          nodeData.exed = true;
+        }
+        return nodeData;
+      }),
       links: gData.links.map(link => ({
         source: link.source.id,
         target: link.target.id,
@@ -1136,7 +1217,8 @@ document.addEventListener('DOMContentLoaded', () => {
         x: nodeData.x,
         y: nodeData.y,
         fx: nodeData.x,  // Fix the node in its loaded position
-        fy: nodeData.y   // Fix the node in its loaded position
+        fy: nodeData.y,  // Fix the node in its loaded position
+        exed: nodeData.exed || false
       });
     });
 
