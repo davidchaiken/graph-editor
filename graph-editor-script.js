@@ -14,6 +14,9 @@
    limitations under the License.
 */
 
+const APPLICATION_NAME = "graph-editor";
+const GRAPH_EDITOR_VERSION = "0.2";
+
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize slider backgrounds
@@ -989,8 +992,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function saveGraphFileToDisk(graphName) {
     const graphData = {
       metadata: {
-        application: "graph-editor",
-        version: "0.1",
+        application: APPLICATION_NAME,
+        version: GRAPH_EDITOR_VERSION,
         timestamp: new Date().toISOString().split('.')[0] + 'Z',  // Keep UTC for metadata
         name: graphName
       },
