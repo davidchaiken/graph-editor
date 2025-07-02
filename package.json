@@ -1,0 +1,11 @@
+{
+  "devDependencies": {
+    "@types/d3": "^7.4.3",
+    "@types/html2canvas": "^0.5.35",
+    "esbuild": "^0.25.5",
+    "typescript": "^5.8.3"
+  },
+  "scripts": {
+    "build": "esbuild graph-editor-script.ts --bundle --minify --sourcemap --outfile=dist/graph-editor-script.js"
+  }
+}
