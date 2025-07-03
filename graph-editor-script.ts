@@ -20,7 +20,7 @@ import html2canvas from 'html2canvas';
 import ForceGraph, { LinkObject, NodeObject } from 'force-graph';
 
 const APPLICATION_NAME = "graph-editor";
-const GRAPH_EDITOR_VERSION = "0.2";
+const GRAPH_EDITOR_VERSION = "0.3";
 
 interface Node {
   id: number;
