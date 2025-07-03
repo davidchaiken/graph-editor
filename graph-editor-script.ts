@@ -126,8 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .linkWidth('thickness')
       .linkColor('color')
       // Use a function to handle undefined labels
-      .linkLabel((link: LinkObject) =>
-        (link as LinkObject & Link).label || '')
+      .linkLabel((link: LinkObject) => (link as Link).label || '')
       .linkCanvasObject((linkobj: LinkObject, ctx: CanvasRenderingContext2D, globalScale: number) => {
         const link = linkobj as Link;
         const source: NodeObject = link.source as NodeObject;
