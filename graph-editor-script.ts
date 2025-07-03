@@ -17,6 +17,7 @@
 import * as d3 from 'd3';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
+import ForceGraph, { LinkObject, NodeObject } from 'force-graph';
 
 const APPLICATION_NAME = "graph-editor";
 const GRAPH_EDITOR_VERSION = "0.2";
@@ -46,10 +47,6 @@ interface GraphData {
   nodes: Node[];
   links: Link[];
 }
-
-// Temporary type for ForceGraph to resolve linter error
-// Replace with the correct type if available from the force-graph library
-declare const ForceGraph: any;
 
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', () => {
@@ -119,8 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // Initialize graph
-  const Graph = ForceGraph()
-    (document.getElementById('graph'))
+  const Graph = new ForceGraph(
+    document.getElementById('graph')!)
       .graphData(gData)
       .nodeId('id')
       .nodeLabel('label')
@@ -128,15 +125,18 @@ document.addEventListener('DOMContentLoaded', () => {
       .nodeVal('size')
       .linkWidth('thickness')
       .linkColor('color')
-      .linkLabel((link: Link) => link.label || '')  // Use a function to handle undefined labels
-      .linkCanvasObject((link: Link, ctx: CanvasRenderingContext2D, globalScale: number) => {
-        const source = link.source;
-        const target = link.target;
+      // Use a function to handle undefined labels
+      .linkLabel((link: LinkObject) =>
+        (link as LinkObject & Link).label || '')
+      .linkCanvasObject((linkobj: LinkObject, ctx: CanvasRenderingContext2D, globalScale: number) => {
+        const link = linkobj as Link;
+        const source: NodeObject = link.source as NodeObject;
+        const target: NodeObject = link.target as NodeObject;
         
         // Draw link
         ctx.beginPath();
-        ctx.moveTo(source.x, source.y);
-        ctx.lineTo(target.x, target.y);
+        ctx.moveTo(source.x!, source.y!);
+        ctx.lineTo(target.x!, target.y!);
         
         // Set line style based on selection
         if (link === selectedLink) {
@@ -173,11 +173,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Draw link label if it exists
         if (link.label) {
-          const midX = (source.x + target.x) / 2;
-          const midY = (source.y + target.y) / 2;
+          const midX = (source.x! + target.x!) / 2;
+          const midY = (source.y! + target.y!) / 2;
           
           // Calculate angle for text rotation
-          const angle = Math.atan2(target.y - source.y, target.x - source.x);
+          const angle = Math.atan2(target.y! - source.y!, target.x! - source.x!);
           
           // Save context state
           ctx.save();
@@ -202,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ctx.restore();
         }
       })
-      .onNodeClick((node: Node, event: MouseEvent) => handleNodeClickForLink(node, event))
+      .onNodeClick((node: NodeObject, event: MouseEvent) => handleNodeClickForLink(node as Node, event))
       .onNodeRightClick(handleNodeRightClick)
       .onLinkClick(handleLinkClick)
       .onBackgroundClick(() => {
@@ -219,13 +219,14 @@ document.addEventListener('DOMContentLoaded', () => {
         (document.getElementById('linkLabel') as HTMLInputElement)!.value = '';
         Graph.graphData(gData);
       })
-      .onNodeDragEnd((node: Node) => {
+      .onNodeDragEnd((node: NodeObject) => {
         node.fx = node.x!;
         node.fy = node.y!;
         isGraphModified = true;
         Graph.d3Force('center', null); // the user is taking control of the positions of nodes
       })
-      .nodeCanvasObject((node: Node, ctx: CanvasRenderingContext2D, globalScale: number) => {
+      .nodeCanvasObject((nodeobj: NodeObject, ctx: CanvasRenderingContext2D, globalScale: number) => {
+        const node = nodeobj as Node;
         // Draw node
         ctx.beginPath();
         ctx.arc(node.x, node.y, node.size || 5, 0, 2 * Math.PI, false);
@@ -692,9 +693,11 @@ document.addEventListener('DOMContentLoaded', () => {
     isCreatingLink = (event.target as HTMLInputElement).checked;
     
     if (isCreatingLink) {
-      Graph.onNodeClick((node: Node, event: MouseEvent) => handleNodeClickForLink(node, event));
+      Graph.onNodeClick((node: NodeObject, event: MouseEvent) => 
+        handleNodeClickForLink(node as Node, event));
     } else {
-      Graph.onNodeClick((node: Node, event: MouseEvent) => handleNodeClick(node));
+      Graph.onNodeClick((node: NodeObject, event: MouseEvent) =>
+        handleNodeClick(node as Node));
     }
   }
 
@@ -770,14 +773,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function handleNodeRightClick(node: Node) {
+  function handleNodeRightClick(node: NodeObject) {
     // Release node from its fixed position and let the simulation take over
     delete node.fx;
     delete node.fy;
     Graph.graphData(gData);
   }
 
-  function handleLinkClick(link: Link, event?: MouseEvent) {
+  function handleLinkClick(linkobj: LinkObject, event?: MouseEvent) {
+    const link = linkobj as Link;
     if (event) {
       event.stopPropagation();
     }
