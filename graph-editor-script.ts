@@ -22,7 +22,10 @@ import ForceGraph, { LinkObject, NodeObject } from 'force-graph';
 const APPLICATION_NAME = "graph-editor";
 const GRAPH_EDITOR_VERSION = "0.3";
 
-interface Node {
+// Node is stored in the ForceGraph NodeObject.
+// It is not really a proper extension, because it restricts some of the
+// properties and makes some of them required to reduce runtime type checks.
+interface Node extends NodeObject {
   id: number;
   label: string;
   color: string;
@@ -34,7 +37,10 @@ interface Node {
   exed?: boolean;
 }
 
-interface Link {
+// Link is stored in the ForceGraph LinkObject.
+// It makes the source and target properties required and restricts
+// these two properties to the Node type to reduce runtime type checks.
+interface Link extends Required<LinkObject> {
   source: Node;
   target: Node;
   thickness: number;

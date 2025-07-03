@@ -15,6 +15,10 @@ build:
 # First clean; then check; then build
 status: clean check build
 
+# Can also use http-server with nodejs, but this is even easier...
+server:
+	python3 -m http.server
+
 # Clean rule: remove build artifacts
 clean:
 	rm -rf dist/graph-editor-script.js dist/graph-editor-script.js.map
