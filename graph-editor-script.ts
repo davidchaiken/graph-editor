@@ -16,6 +16,7 @@
 
 import * as d3 from 'd3';
 import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const APPLICATION_NAME = "graph-editor";
 const GRAPH_EDITOR_VERSION = "0.2";
