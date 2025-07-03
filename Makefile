@@ -18,10 +18,3 @@ status: clean check build
 # Clean rule: remove build artifacts
 clean:
 	rm -rf dist/graph-editor-script.js dist/graph-editor-script.js.map
-
-# Proxy to libs/Makefile for downloads and cleaning libraries
-downloads:
-	$(MAKE) -C libs downloads
-
-libs-clean:
-	$(MAKE) -C libs clean
