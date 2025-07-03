@@ -22,6 +22,10 @@ import ForceGraph, { LinkObject, NodeObject } from 'force-graph';
 const APPLICATION_NAME = "graph-editor";
 const GRAPH_EDITOR_VERSION = "0.3";
 
+const DEFAULT_COLOR = '#1f77b4';
+const DEFAULT_THICKNESS = 1;
+const DEFAULT_SIZE = 5;
+
 // Node is stored in the ForceGraph NodeObject.
 // It is not really a proper extension, because it restricts some of the
 // properties and makes some of them required to reduce runtime type checks.
@@ -147,12 +151,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (link === selectedLink) {
           // Glow effect for selected links
           ctx.shadowBlur = 15;
-          ctx.shadowColor = link.color || '#1f77b4';
-          ctx.lineWidth = (link.thickness || 1) * 0.75;
+          ctx.shadowColor = link.color || DEFAULT_COLOR;
+          ctx.lineWidth = (link.thickness || DEFAULT_THICKNESS) * 0.75;
         } else {
           // Normal style for unselected links
           ctx.shadowBlur = 0;
-          ctx.lineWidth = (link.thickness || 1) * 0.5;
+          ctx.lineWidth = (link.thickness || DEFAULT_THICKNESS) * 0.5;
         }
         
         // Set line dash pattern
@@ -173,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.setLineDash([]);
         }
         
-        ctx.strokeStyle = link.color || '#1f77b4';
+        ctx.strokeStyle = link.color || DEFAULT_COLOR;
         ctx.stroke();
 
         // Draw link label if it exists
@@ -234,18 +238,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const node = nodeobj as Node;
         // Draw node
         ctx.beginPath();
-        ctx.arc(node.x, node.y, node.size || 5, 0, 2 * Math.PI, false);
-        ctx.fillStyle = node.color || '#1f77b4';
+        ctx.arc(node.x, node.y, node.size || DEFAULT_SIZE, 0, 2 * Math.PI, false);
+        ctx.fillStyle = node.color || DEFAULT_COLOR;
         ctx.fill();
 
         // Add glow effect if node is selected
         if (node === selectedNode) {
           ctx.shadowBlur = 15;
-          ctx.shadowColor = node.color || '#1f77b4';
+          ctx.shadowColor = node.color || DEFAULT_COLOR;
           // Draw a slightly larger circle for the glow
           ctx.beginPath();
-          ctx.arc(node.x, node.y, (node.size || 5) * 1.2, 0, 2 * Math.PI, false);
-          ctx.fillStyle = node.color || '#1f77b4';
+          ctx.arc(node.x, node.y, (node.size || DEFAULT_SIZE) * 1.2, 0, 2 * Math.PI, false);
+          ctx.fillStyle = node.color || DEFAULT_COLOR;
           ctx.fill();
           // Reset shadow for the label
           ctx.shadowBlur = 0;
@@ -258,11 +262,11 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = 'black';
-        ctx.fillText(label, node.x, node.y + (node.size || 5) + fontSize);
+        ctx.fillText(label, node.x, node.y + (node.size || DEFAULT_SIZE) + fontSize);
 
         // Draw X mark if node is marked
         if (node.exed) {
-          const size = node.size || 5;
+          const size = node.size || DEFAULT_SIZE;
           const x = node.x;
           const y = node.y;
           
@@ -299,19 +303,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const l = link as Link;
         switch (l.dashPattern) {
           case 'dotted':
-            return (l.thickness || 1) * 0.02;
+            return (l.thickness || DEFAULT_THICKNESS) * 0.02;
           case 'dashed':
-            return (l.thickness || 1) * 0.04;
+            return (l.thickness || DEFAULT_THICKNESS) * 0.04;
           case 'long-dashed':
-            return (l.thickness || 1) * 0.06;
+            return (l.thickness || DEFAULT_THICKNESS) * 0.06;
           case 'dash-dot':
-            return (l.thickness || 1) * 0.08;
+            return (l.thickness || DEFAULT_THICKNESS) * 0.08;
           default:
-            return (l.thickness || 1) * 0.1;
+            return (l.thickness || DEFAULT_THICKNESS) * 0.1;
         }
       }))
       .d3Force('center', null) // center force is not intuitive when editing
-      .d3Force('collision', d3.forceCollide((node: any) => ((node as Node).size || 5) + 1))
+      .d3Force('collision', d3.forceCollide((node: any) => ((node as Node).size || DEFAULT_SIZE) + 1))
       .width((document.getElementById('graph') as HTMLElement)!.offsetWidth)
       .height((document.getElementById('graph') as HTMLElement)!.offsetHeight);
 
@@ -320,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
   Graph.zoom(1.5);
 
   // Set default color to first palette color
-  const defaultColor = ((document.querySelector('#colorPalette .color-option') as HTMLElement)!.dataset.color!) || '#1f77b4';
+  const defaultColor = ((document.querySelector('#colorPalette .color-option') as HTMLElement)!.dataset.color!) || DEFAULT_COLOR;
   (document.getElementById('colorPicker') as HTMLInputElement)!.value = defaultColor;
   updateColorSelection(defaultColor);
 
@@ -448,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Color palette event handlers
   document.querySelectorAll('#colorPalette .color-option').forEach((option: Element) => {
     option.addEventListener('click', () => {
-      const color = (option as HTMLElement).dataset.color! || '#1f77b4';
+      const color = (option as HTMLElement).dataset.color || DEFAULT_COLOR;
       (document.getElementById('colorPicker') as HTMLInputElement)!.value = color;
       applyColor(color);
       updateColorSelection(color);
@@ -502,12 +506,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Update color picker value
-    (document.getElementById('colorPicker') as HTMLInputElement)!.value = color || '#1f77b4';
+    (document.getElementById('colorPicker') as HTMLInputElement)!.value = color || DEFAULT_COLOR;
 
     // Update X checkbox color
     const xMark = document.querySelector('.x-mark') as HTMLElement;
     if (xMark) {
-      xMark.style.backgroundColor = color || '#1f77b4';
+      xMark.style.backgroundColor = color || DEFAULT_COLOR;
     }
   }
 
@@ -830,7 +834,7 @@ document.addEventListener('DOMContentLoaded', () => {
       labelInput.value = selectedNode.label || '';
       sizeInput.value = selectedNode.size.toString();
       exedInput.checked = !!selectedNode.exed;
-      updateColorSelection(selectedNode.color || '#1f77b4');
+      updateColorSelection(selectedNode.color || DEFAULT_COLOR);
       deleteBtn.disabled = false;
       deleteBtn.style.opacity = '1';
       labelInput.addEventListener('input', () => {
@@ -876,7 +880,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (selectedLink) {
       thicknessInput.value = selectedLink.thickness.toString();
-      updateColorSelection(selectedLink.color || '#1f77b4');
+      updateColorSelection(selectedLink.color || DEFAULT_COLOR);
       deleteBtn.disabled = false;
       deleteBtn.style.opacity = '1';
       thicknessInput.addEventListener('input', () => {
@@ -1212,7 +1216,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // This function processes the graph data and updates the graph.
   // It is called when the user loads a graph and for the example graph on initialization.
   // Error handling needs to be done by the caller.
-  // TODO: need to review for Node and Link properties that need to be set to default values in case they are not present in the graph data
   function processGraphData(graphData: any): void {
     // Validate the loaded data
     if (!graphData.nodes || !graphData.links) {
@@ -1241,17 +1244,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load nodes
     graphData.nodes.forEach((nodeData: Node) => {
-      gData.nodes.push({
-        id: nodeData.id,
-        label: nodeData.label,
-        color: nodeData.color,
-        size: nodeData.size,
-        x: nodeData.x,
-        y: nodeData.y,
-        fx: nodeData.x,  // Fix the node in its loaded position
-        fy: nodeData.y,  // Fix the node in its loaded position
-        exed: nodeData.exed || false
-      });
+      if (nodeData.id &&
+          typeof nodeData.id === 'number' &&
+          nodeData.x &&
+          typeof nodeData.x === 'number' &&
+          nodeData.y &&
+          typeof nodeData.y === 'number' &&
+          (!nodeData.label || typeof nodeData.label === 'string') &&
+          (!nodeData.color || typeof nodeData.color === 'string') &&
+          (!nodeData.size || typeof nodeData.size === 'number')
+      ) {
+        gData.nodes.push({
+          id: nodeData.id,
+          label: nodeData.label || '',
+          color: nodeData.color || DEFAULT_COLOR,
+          size: nodeData.size || DEFAULT_SIZE,
+          x: nodeData.x,
+          y: nodeData.y,
+          fx: nodeData.x,  // Fix the node in its loaded position
+          fy: nodeData.y,  // Fix the node in its loaded position
+          exed: !!nodeData.exed
+        });
+      } else {
+        console.warn(`Loaded node (${nodeData.id}) failed type check.`);
+      }
     });
 
     // Build a Map for fast node lookup
@@ -1264,15 +1280,24 @@ document.addEventListener('DOMContentLoaded', () => {
       { source: number, target: number }) => {
       const sourceNode = nodeMap.get(linkData.source);
       const targetNode = nodeMap.get(linkData.target);
-      if (sourceNode && targetNode) {
+      if (sourceNode &&
+          targetNode &&
+          (!linkData.thickness || typeof linkData.thickness === 'number') &&
+          (!linkData.color || typeof linkData.color === 'string') &&
+          (!linkData.label || typeof linkData.label === 'string') &&
+          (!linkData.dashPattern || typeof linkData.dashPattern === 'string')
+        ) {
         gData.links.push({
           source: sourceNode,
           target: targetNode,
-          thickness: linkData.thickness,
-          color: linkData.color,
-          label: linkData.label,
-          dashPattern: linkData.dashPattern
+          thickness: linkData.thickness || DEFAULT_THICKNESS,
+          color: linkData.color || DEFAULT_COLOR,
+          ...(linkData.label && { label: linkData.label }),
+          ...(linkData.dashPattern && {dashPattern: linkData.dashPattern })
         });
+      } else {
+        console.warn(
+          `Loaded link (${linkData.source} -> ${linkData.target}) failed type check.`);
       }
     });
 
