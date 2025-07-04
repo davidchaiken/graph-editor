@@ -26,7 +26,7 @@ const DEFAULT_COLOR = '#1f77b4';
 const DEFAULT_THICKNESS = 1;
 const DEFAULT_SIZE = 5;
 
-const DASH_PATTERN_OPTIONS = ['solid', 'dotted', 'dashed', 'long-dashed', 'dash-dot'];
+const DASH_PATTERN_OPTIONS = ['solid', 'dotted', 'dashed', 'long-dashed', 'dash-dot'] as const;
 const DEFAULT_PATTERN = 'solid';
 type DashPattern = typeof DASH_PATTERN_OPTIONS[number];
 
@@ -1469,7 +1469,7 @@ document.addEventListener('DOMContentLoaded', () => {
    * @param {DashPattern} pattern - The pattern to set.
    * @returns {void}
    */
-  function setSelectedStyle(pattern: string): void {
+  function setSelectedStyle(pattern: DashPattern): void {
     const selectedStyle = (document.getElementById('selectedStyle') as HTMLCanvasElement);
     if (!selectedStyle) return;
     
