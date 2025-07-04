@@ -26,6 +26,14 @@ const DEFAULT_COLOR = '#1f77b4';
 const DEFAULT_THICKNESS = 1;
 const DEFAULT_SIZE = 5;
 
+const DASH_PATTERN_OPTIONS = ['solid', 'dotted', 'dashed', 'long-dashed', 'dash-dot'];
+const DEFAULT_PATTERN = 'solid';
+type DashPattern = typeof DASH_PATTERN_OPTIONS[number];
+
+function isDashPattern(dashPattern: string): dashPattern is DashPattern {
+  return DASH_PATTERN_OPTIONS.includes(dashPattern as DashPattern);
+}
+
 // Node is stored in the ForceGraph NodeObject.
 // It is not really a proper extension, because it restricts some of the
 // properties and makes some of them required to reduce runtime type checks.
@@ -50,7 +58,7 @@ interface Link extends Required<LinkObject> {
   thickness: number;
   color: string;
   label?: string;
-  dashPattern?: string;
+  dashPattern?: DashPattern;
 }
 
 interface GraphData {
@@ -711,9 +719,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Helper function to get the current pattern from the selected style canvas
-  function getCurrentPattern(): string {
+  function getCurrentPattern(): DashPattern {
     const selectedStyle = document.getElementById('selectedStyle');
-    return selectedStyle ? selectedStyle.dataset.pattern || 'solid' : 'solid';
+    return selectedStyle ? selectedStyle.dataset.pattern as DashPattern || DEFAULT_PATTERN : DEFAULT_PATTERN;
   }
 
   function handleNodeClickForLink(node: Node, event: MouseEvent) {
@@ -809,7 +817,7 @@ document.addEventListener('DOMContentLoaded', () => {
     (document.getElementById('linkLabel') as HTMLInputElement)!.value = link.label || '';
     
     // Update link dash pattern
-    setSelectedStyle(link.dashPattern || 'solid');
+    setSelectedStyle(link.dashPattern || DEFAULT_PATTERN);
     
     // Update link thickness slider
     const thicknessSlider = (document.getElementById('linkThickness') as HTMLInputElement);
@@ -1285,7 +1293,7 @@ document.addEventListener('DOMContentLoaded', () => {
           (!linkData.thickness || typeof linkData.thickness === 'number') &&
           (!linkData.color || typeof linkData.color === 'string') &&
           (!linkData.label || typeof linkData.label === 'string') &&
-          (!linkData.dashPattern || typeof linkData.dashPattern === 'string')
+          (!linkData.dashPattern || isDashPattern(linkData.dashPattern))
         ) {
         gData.links.push({
           source: sourceNode,
@@ -1431,10 +1439,10 @@ document.addEventListener('DOMContentLoaded', () => {
   /**
    * Draws a line pattern on a canvas element.
    * @param {HTMLCanvasElement} canvas - The canvas element to draw on
-   * @param {string} pattern - The pattern to draw. Must be one of: 'solid', 'dotted', 'dashed', 'long-dashed', 'dash-dot'
+   * @param {DashPattern} pattern - The pattern to draw.
    * @returns {void}
    */
-  function drawPattern(canvas: HTMLCanvasElement, pattern: string): void {
+  function drawPattern(canvas: HTMLCanvasElement, pattern: DashPattern): void {
     const ctx = (canvas.getContext('2d'))!;
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width;
@@ -1458,7 +1466,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /**
    * Updates the selected style canvas with a new pattern.
-   * @param {string} pattern - The pattern to set. Must be one of: 'solid', 'dotted', 'dashed', 'long-dashed', 'dash-dot'
+   * @param {DashPattern} pattern - The pattern to set.
    * @returns {void}
    */
   function setSelectedStyle(pattern: string): void {
@@ -1472,10 +1480,10 @@ document.addEventListener('DOMContentLoaded', () => {
   /**
    * Initializes a pattern option canvas with click handling.
    * @param {HTMLCanvasElement} canvas - The canvas element to initialize
-   * @param {string} pattern - The pattern to draw. Must be one of: 'solid', 'dotted', 'dashed', 'long-dashed', 'dash-dot'
+   * @param {DashPattern} pattern - The pattern to draw.
    * @returns {void}
    */
-  function initPatternOption(canvas: HTMLCanvasElement, pattern: string): void {
+  function initPatternOption(canvas: HTMLCanvasElement, pattern: DashPattern): void {
     drawPattern(canvas, pattern);
     canvas.dataset.pattern = pattern;
     
@@ -1509,7 +1517,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedStyleBtn = document.getElementById('selectedStyleBtn');
     if (selectedStyle && selectedStyleBtn) {
       // Set initial pattern
-      setSelectedStyle('solid');
+      setSelectedStyle(DEFAULT_PATTERN);
       
       // Handle click on button
       selectedStyleBtn.onclick = function(e) {
@@ -1522,7 +1530,7 @@ document.addEventListener('DOMContentLoaded', () => {
           
           // Initialize all option canvases
           document.querySelectorAll('#styleOptions canvas').forEach(canvas => {
-            initPatternOption(canvas as HTMLCanvasElement, (canvas as HTMLElement).dataset.pattern!);
+            initPatternOption(canvas as HTMLCanvasElement, (canvas as HTMLElement).dataset.pattern! as DashPattern);
           });
         } else {
           options.style.display = 'none';
@@ -1532,7 +1540,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize option canvases
     document.querySelectorAll('#styleOptions canvas').forEach(canvas => {
-      initPatternOption(canvas as HTMLCanvasElement, (canvas as HTMLElement).dataset.pattern!);
+      initPatternOption(canvas as HTMLCanvasElement, (canvas as HTMLElement).dataset.pattern! as DashPattern);
     });
 
     // Handle window resize
@@ -1540,7 +1548,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Redraw all canvases when window is resized
       setSelectedStyle(getCurrentPattern());
       document.querySelectorAll('#styleOptions canvas').forEach(canvas => {
-        initPatternOption(canvas as HTMLCanvasElement, (canvas as HTMLElement).dataset.pattern!);
+        initPatternOption(canvas as HTMLCanvasElement, (canvas as HTMLElement).dataset.pattern! as DashPattern);
       });
     });
 
@@ -1561,4 +1569,4 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     initLinePatternDropdown();
   }
-}); 
+});
