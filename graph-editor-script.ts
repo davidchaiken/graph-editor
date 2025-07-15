@@ -73,11 +73,11 @@ document.addEventListener('DOMContentLoaded', () => {
   updateLinkThicknessPreview();
 
   // Set initial opacity for Delete Node button
-  (document.getElementById('deleteNodeBtn') as HTMLButtonElement)!.style.opacity = '0.5';
+  (document.getElementById('deleteNodeBtn') as HTMLButtonElement).style.opacity = '0.5';
   
   // Set initial state for Clear button
-  (document.getElementById('clearGraphBtn') as HTMLButtonElement)!.disabled = true;
-  (document.getElementById('clearGraphBtn') as HTMLButtonElement)!.style.opacity = '0.5';
+  (document.getElementById('clearGraphBtn') as HTMLButtonElement).disabled = true;
+  (document.getElementById('clearGraphBtn') as HTMLButtonElement).style.opacity = '0.5';
 
   // Track if graph has been modified
   let isGraphModified = false;
@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Add event listeners for modal buttons
   document.getElementById('saveAndProceedBtn')!.addEventListener('click', () => {
-    const graphName = (document.getElementById('graphName') as HTMLInputElement)!.value || 'graph';
+    const graphName = (document.getElementById('graphName') as HTMLInputElement).value || 'graph';
     saveGraphFileToDisk(graphName);
     hideConfirmModalAndExecute();
   });
@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Add global event listener for node size slider
-  (document.getElementById('nodeSize') as HTMLInputElement)!.addEventListener('input', () => {
+  (document.getElementById('nodeSize') as HTMLInputElement).addEventListener('input', () => {
     updateNodeSizePreview();
   });
 
@@ -226,14 +226,14 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedNode = null;
         selectedLink = null;
         // Only update the UI to reflect the cleared selection
-        const deleteNodeBtn = (document.getElementById('deleteNodeBtn') as HTMLButtonElement)!;
-        const deleteLinkBtn = (document.getElementById('deleteLinkBtn') as HTMLButtonElement)!;
+        const deleteNodeBtn = (document.getElementById('deleteNodeBtn') as HTMLButtonElement);
+        const deleteLinkBtn = (document.getElementById('deleteLinkBtn') as HTMLButtonElement);
         deleteNodeBtn.disabled = true;
         deleteNodeBtn.style.opacity = '0.5';
         deleteLinkBtn.disabled = true;
         deleteLinkBtn.style.opacity = '0.5';
         // Clear link label input
-        (document.getElementById('linkLabel') as HTMLInputElement)!.value = '';
+        (document.getElementById('linkLabel') as HTMLInputElement).value = '';
         Graph.graphData(gData);
       })
       .onNodeDragEnd((node: NodeObject) => {
@@ -299,8 +299,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // distance is determined by the color of the nodes and the link
         const baseDistance = 100;
         const l = link as Link;
-        if ((l.source as Node).color === (l.target as Node).color) {
-          if ((l.source as Node).color == l.color) {
+        if ((l.source).color === (l.target).color) {
+          if ((l.source).color == l.color) {
             return baseDistance * 0.5; // node + link color makes nodes a lot more attractive
           } else {
             return baseDistance * 0.75; // node color makes nodes more attractive
@@ -324,16 +324,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }))
       .d3Force('center', null) // center force is not intuitive when editing
       .d3Force('collision', d3.forceCollide((node: any) => ((node as Node).size || DEFAULT_SIZE) + 1))
-      .width((document.getElementById('graph') as HTMLElement)!.offsetWidth)
-      .height((document.getElementById('graph') as HTMLElement)!.offsetHeight);
+      .width((document.getElementById('graph') as HTMLElement).offsetWidth)
+      .height((document.getElementById('graph') as HTMLElement).offsetHeight);
 
   // Initialize view
   Graph.centerAt(0, 0, 1000);
   Graph.zoom(1.5);
 
   // Set default color to first palette color
-  const defaultColor = ((document.querySelector('#colorPalette .color-option') as HTMLElement)!.dataset.color!) || DEFAULT_COLOR;
-  (document.getElementById('colorPicker') as HTMLInputElement)!.value = defaultColor;
+  const defaultColor = ((document.querySelector('#colorPalette .color-option') as HTMLElement).dataset.color!) || DEFAULT_COLOR;
+  (document.getElementById('colorPicker') as HTMLInputElement).value = defaultColor;
   updateColorSelection(defaultColor);
 
   // Handle window resize
@@ -367,8 +367,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('deleteNodeBtn')!.addEventListener('click', deleteNode);
   document.getElementById('deleteLinkBtn')!.addEventListener('click', deleteLink);
   document.getElementById('addLinksToggle')!.addEventListener('change', toggleLinkCreation);
-  (document.getElementById('nodeSize') as HTMLInputElement)!.addEventListener('input', updateNodeSizePreview);
-  (document.getElementById('linkThickness') as HTMLInputElement)!.addEventListener('input', updateLinkThicknessPreview);
+  (document.getElementById('nodeSize') as HTMLInputElement).addEventListener('input', updateNodeSizePreview);
+  (document.getElementById('linkThickness') as HTMLInputElement).addEventListener('input', updateLinkThicknessPreview);
   document.getElementById('autoLayoutBtn')!.addEventListener('click', () => {
     hideGraphError();
     Graph.d3Force('center', d3.forceCenter(0, 0).strength(0.1)); // move towards origin
@@ -407,10 +407,10 @@ document.addEventListener('DOMContentLoaded', () => {
         (document.activeElement as HTMLElement).tagName !== 'TEXTAREA') {
 
       // Create a new node at the current mouse position
-      const proposedLabel = (document.getElementById('nodeLabel') as HTMLInputElement)!.value || 'Node ' + (gData.nodes.length + 1);
-      const size = parseInt((document.getElementById('nodeSize') as HTMLInputElement)!.value);
-      const color = (document.getElementById('colorPicker') as HTMLInputElement)!.value;
-      const exed = (document.getElementById('nodeExed') as HTMLInputElement)!.checked;
+      const proposedLabel = (document.getElementById('nodeLabel') as HTMLInputElement).value || 'Node ' + (gData.nodes.length + 1);
+      const size = parseInt((document.getElementById('nodeSize') as HTMLInputElement).value);
+      const color = (document.getElementById('colorPicker') as HTMLInputElement).value;
+      const exed = (document.getElementById('nodeExed') as HTMLInputElement).checked;
       const uniqueLabel = getUniqueLabel(proposedLabel);
 
       const newNode = {
@@ -444,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
         (document.activeElement as HTMLElement).tagName !== 'INPUT' &&
         (document.activeElement as HTMLElement).tagName !== 'TEXTAREA') {
       
-      const exedInput = (document.getElementById('nodeExed') as HTMLInputElement)!;
+      const exedInput = (document.getElementById('nodeExed') as HTMLInputElement);
       const newState = !exedInput.checked;
       exedInput.checked = newState;
       
@@ -461,7 +461,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('#colorPalette .color-option').forEach((option: Element) => {
     option.addEventListener('click', () => {
       const color = (option as HTMLElement).dataset.color || DEFAULT_COLOR;
-      (document.getElementById('colorPicker') as HTMLInputElement)!.value = color;
+      (document.getElementById('colorPicker') as HTMLInputElement).value = color;
       applyColor(color);
       updateColorSelection(color);
     });
@@ -514,7 +514,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Update color picker value
-    (document.getElementById('colorPicker') as HTMLInputElement)!.value = color || DEFAULT_COLOR;
+    (document.getElementById('colorPicker') as HTMLInputElement).value = color || DEFAULT_COLOR;
 
     // Update X checkbox color
     const xMark = document.querySelector('.x-mark') as HTMLElement;
@@ -572,10 +572,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function addNode(): void {
-    const proposedLabel = (document.getElementById('nodeLabel') as HTMLInputElement)!.value || 'Node ' + (gData.nodes.length + 1);
-    const size = parseInt((document.getElementById('nodeSize') as HTMLInputElement)!.value);
-    const color = (document.getElementById('colorPicker') as HTMLInputElement)!.value;
-    const exed = (document.getElementById('nodeExed') as HTMLInputElement)!.checked;
+    const proposedLabel = (document.getElementById('nodeLabel') as HTMLInputElement).value || 'Node ' + (gData.nodes.length + 1);
+    const size = parseInt((document.getElementById('nodeSize') as HTMLInputElement).value);
+    const color = (document.getElementById('colorPicker') as HTMLInputElement).value;
+    const exed = (document.getElementById('nodeExed') as HTMLInputElement).checked;
 
     const uniqueLabel = getUniqueLabel(proposedLabel);
 
@@ -638,8 +638,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Disable Clear button if no nodes remain
     if (gData.nodes.length === 0) {
-      (document.getElementById('clearGraphBtn') as HTMLButtonElement)!.disabled = true;
-      (document.getElementById('clearGraphBtn') as HTMLButtonElement)!.style.opacity = '0.5';
+      (document.getElementById('clearGraphBtn') as HTMLButtonElement).disabled = true;
+      (document.getElementById('clearGraphBtn') as HTMLButtonElement).style.opacity = '0.5';
       isGraphModified = false; // special case: no need to save, even if the graph is modified
     } else {
       isGraphModified = true; // mark graph as modified
@@ -743,9 +743,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const newLink = {
           source: selectedNode,
           target: node,
-          thickness: parseInt((document.getElementById('linkThickness') as HTMLInputElement)!.value),
-          color: (document.getElementById('colorPicker') as HTMLInputElement)!.value,
-          label: (document.getElementById('linkLabel') as HTMLInputElement)!.value || undefined,
+          thickness: parseInt((document.getElementById('linkThickness') as HTMLInputElement).value),
+          color: (document.getElementById('colorPicker') as HTMLInputElement).value,
+          label: (document.getElementById('linkLabel') as HTMLInputElement).value || undefined,
           dashPattern: getCurrentPattern()
         };
         gData.links.push(newLink);
@@ -785,8 +785,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Enable Clear button if this is the first node
     if (gData.nodes.length === 1) {
-      (document.getElementById('clearGraphBtn') as HTMLButtonElement)!.disabled = false;
-      (document.getElementById('clearGraphBtn') as HTMLButtonElement)!.style.opacity = '1';
+      (document.getElementById('clearGraphBtn') as HTMLButtonElement).disabled = false;
+      (document.getElementById('clearGraphBtn') as HTMLButtonElement).style.opacity = '1';
     }
   }
 
@@ -806,15 +806,15 @@ document.addEventListener('DOMContentLoaded', () => {
     selectedNode = null;
     
     // Update UI to reflect link selection
-    const deleteNodeBtn = (document.getElementById('deleteNodeBtn') as HTMLButtonElement)!;
-    const deleteLinkBtn = (document.getElementById('deleteLinkBtn') as HTMLButtonElement)!;
+    const deleteNodeBtn = (document.getElementById('deleteNodeBtn') as HTMLButtonElement);
+    const deleteLinkBtn = (document.getElementById('deleteLinkBtn') as HTMLButtonElement);
     deleteNodeBtn.disabled = true;
     deleteNodeBtn.style.opacity = '0.5';
     deleteLinkBtn.disabled = false;
     deleteLinkBtn.style.opacity = '1';
     
     // Update link label input
-    (document.getElementById('linkLabel') as HTMLInputElement)!.value = link.label || '';
+    (document.getElementById('linkLabel') as HTMLInputElement).value = link.label || '';
     
     // Update link dash pattern
     setSelectedStyle(link.dashPattern || DEFAULT_PATTERN);
@@ -833,10 +833,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateNodePropertiesUI(): void {
-    const labelInput = (document.getElementById('nodeLabel') as HTMLInputElement)!;
-    const sizeInput = (document.getElementById('nodeSize') as HTMLInputElement)!;
-    const exedInput = (document.getElementById('nodeExed') as HTMLInputElement)!;
-    const deleteBtn = (document.getElementById('deleteNodeBtn') as HTMLButtonElement)!;
+    const labelInput = (document.getElementById('nodeLabel') as HTMLInputElement);
+    const sizeInput = (document.getElementById('nodeSize') as HTMLInputElement);
+    const exedInput = (document.getElementById('nodeExed') as HTMLInputElement);
+    const deleteBtn = (document.getElementById('deleteNodeBtn') as HTMLButtonElement);
 
     if (selectedNode) {
       labelInput.value = selectedNode.label || '';
@@ -883,8 +883,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateLinkPropertiesUI(): void {
-    const thicknessInput = (document.getElementById('linkThickness') as HTMLInputElement)!;
-    const deleteBtn = (document.getElementById('deleteLinkBtn') as HTMLButtonElement)!;
+    const thicknessInput = (document.getElementById('linkThickness') as HTMLInputElement);
+    const deleteBtn = (document.getElementById('deleteLinkBtn') as HTMLButtonElement);
 
     if (selectedLink) {
       thicknessInput.value = selectedLink.thickness.toString();
@@ -907,8 +907,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateNodeSizePreview(): void {
-    const size = (document.getElementById('nodeSize') as HTMLInputElement)!.value;
-    const sizeInput = (document.getElementById('nodeSize') as HTMLInputElement)!;
+    const size = (document.getElementById('nodeSize') as HTMLInputElement).value;
+    const sizeInput = (document.getElementById('nodeSize') as HTMLInputElement);
     if (!sizeInput) return;
     const min = parseInt(sizeInput.min);
     const max = parseInt(sizeInput.max);
@@ -917,8 +917,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateLinkThicknessPreview(): void {
-    const thickness = (document.getElementById('linkThickness') as HTMLInputElement)!.value;
-    const thicknessInput = (document.getElementById('linkThickness') as HTMLInputElement)!;
+    const thickness = (document.getElementById('linkThickness') as HTMLInputElement).value;
+    const thicknessInput = (document.getElementById('linkThickness') as HTMLInputElement);
     const min = parseInt(thicknessInput.min);
     const max = parseInt(thicknessInput.max);
     const percent = ((parseInt(thickness) - min) / (max - min)) * 100;
@@ -945,10 +945,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateSaveSelectedButtonState(): void {
-    const saveGraphFileInput = (document.getElementById('saveGraphFile') as HTMLInputElement)!;
-    const saveImageFileInput = (document.getElementById('saveImageFile') as HTMLInputElement)!;
-    const savePdfFileInput = (document.getElementById('savePdfFile') as HTMLInputElement)!;
-    const saveSelectedBtn = (document.getElementById('saveSelectedBtn') as HTMLButtonElement)!;
+    const saveGraphFileInput = (document.getElementById('saveGraphFile') as HTMLInputElement);
+    const saveImageFileInput = (document.getElementById('saveImageFile') as HTMLInputElement);
+    const savePdfFileInput = (document.getElementById('savePdfFile') as HTMLInputElement);
+    const saveSelectedBtn = (document.getElementById('saveSelectedBtn') as HTMLButtonElement);
     
     if (!saveGraphFileInput || !saveImageFileInput || !savePdfFileInput || !saveSelectedBtn) {
       return;
@@ -1016,7 +1016,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const graphName = (document.getElementById('graphName') as HTMLInputElement)!.value || 'graph';
+    const graphName = (document.getElementById('graphName') as HTMLInputElement).value || 'graph';
 
     if (saveGraphFile && saveGraphFile.checked) {
       saveGraphFileToDisk(graphName);
@@ -1091,10 +1091,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function saveGraphAsImage(graphName: string): void {
     // Get the graph container
-    const graphContainer = document.getElementById('graph')! as HTMLElement;
+    const graphContainer = document.getElementById('graph')!;
     
     // Store and remove the pattern canvases
-    const styleOptions = document.getElementById('styleOptions')! as HTMLElement;
+    const styleOptions = document.getElementById('styleOptions')!;
     const patternCanvases = Array.from(styleOptions.querySelectorAll('canvas'));
     patternCanvases.forEach(canvas => canvas.remove());
     
@@ -1131,10 +1131,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function saveGraphAsPdf(graphName: string): void {
     // Get the graph container
-    const graphContainer = document.getElementById('graph')! as HTMLElement;
+    const graphContainer = document.getElementById('graph')!;
     
     // Store and remove the pattern canvases
-    const styleOptions = document.getElementById('styleOptions')! as HTMLElement;
+    const styleOptions = document.getElementById('styleOptions')!;
     const patternCanvases = Array.from(styleOptions.querySelectorAll('canvas'));
     patternCanvases.forEach(canvas => canvas.remove());
     
@@ -1232,7 +1232,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set the graph name if it exists in the metadata
     if (graphData.metadata && graphData.metadata.name) {
-      (document.getElementById('graphName') as HTMLInputElement)!.value = graphData.metadata.name;
+      (document.getElementById('graphName') as HTMLInputElement).value = graphData.metadata.name;
     }
 
     // Check for duplicate node IDs
@@ -1324,8 +1324,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Enable Clear button if graph has nodes
     if (gData.nodes.length > 0) {
-      (document.getElementById('clearGraphBtn') as HTMLButtonElement)!.disabled = false;
-      (document.getElementById('clearGraphBtn') as HTMLButtonElement)!.style.opacity = '1';
+      (document.getElementById('clearGraphBtn') as HTMLButtonElement).disabled = false;
+      (document.getElementById('clearGraphBtn') as HTMLButtonElement).style.opacity = '1';
     }
 
     // Calculate bounds of the loaded graph
@@ -1354,23 +1354,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function showGraphError(message: string): void {
-    const errorDiv = (document.getElementById('graphError') as HTMLElement)!;
-    const messageSpan = (document.getElementById('errorMessage') as HTMLElement)!;
+    const errorDiv = (document.getElementById('graphError') as HTMLElement);
+    const messageSpan = (document.getElementById('errorMessage') as HTMLElement);
     messageSpan.textContent = message;
     errorDiv.style.display = 'block';
   }
 
   function hideGraphError(): void {
-    const errorDiv = (document.getElementById('graphError') as HTMLElement)!;
+    const errorDiv = (document.getElementById('graphError') as HTMLElement);
     errorDiv.style.display = 'none';
   }
 
   function showConfirmModal(): void {
-    (document.getElementById('confirmModal') as HTMLElement)!.style.display = 'flex';
+    (document.getElementById('confirmModal') as HTMLElement).style.display = 'flex';
   }
 
   function hideConfirmModal(): void {
-    (document.getElementById('confirmModal') as HTMLElement)!.style.display = 'none';
+    (document.getElementById('confirmModal') as HTMLElement).style.display = 'none';
   }
 
   function clearGraph(): void {
@@ -1395,14 +1395,14 @@ document.addEventListener('DOMContentLoaded', () => {
     updateLinkPropertiesUI();
     
     // Reset node label input
-    (document.getElementById('nodeLabel') as HTMLInputElement)!.value = '';
+    (document.getElementById('nodeLabel') as HTMLInputElement).value = '';
     
     // Reset graph name
-    (document.getElementById('graphName') as HTMLInputElement)!.value = '';
+    (document.getElementById('graphName') as HTMLInputElement).value = '';
     
     // Disable Clear button
-    (document.getElementById('clearGraphBtn') as HTMLButtonElement)!.disabled = true;
-    (document.getElementById('clearGraphBtn') as HTMLButtonElement)!.style.opacity = '0.5';
+    (document.getElementById('clearGraphBtn') as HTMLButtonElement).disabled = true;
+    (document.getElementById('clearGraphBtn') as HTMLButtonElement).style.opacity = '0.5';
   }
 
   // Load example graph on initialization
@@ -1491,7 +1491,7 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas.onclick = function(e) {
       e.stopPropagation();
       setSelectedStyle(pattern);
-      (document.getElementById('styleOptions') as HTMLElement)!.style.display = 'none';
+      (document.getElementById('styleOptions') as HTMLElement).style.display = 'none';
       
       // Update selected link if one is selected
       if (selectedLink) {
@@ -1522,7 +1522,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Handle click on button
       selectedStyleBtn.onclick = function(e) {
         e.stopPropagation();
-        const options = document.getElementById('styleOptions')! as HTMLElement;
+        const options = document.getElementById('styleOptions')!;
         
         if (options.style.display === 'none') {
           // Show options first so we can get their dimensions
