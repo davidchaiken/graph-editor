@@ -64,6 +64,13 @@ interface Link extends Required<LinkObject> {
 interface GraphData {
   nodes: Node[];
   links: Link[];
+  metadata?: {
+    name?: string;
+    description?: string;
+    createdBy?: string;
+    createdAt?: string;
+    modifiedAt?: string;
+  };
 }
 
 // Wait for DOM to be fully loaded
@@ -295,7 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       })
       .d3Force('charge', d3.forceManyBody().strength(-100))
-      .d3Force('link', d3.forceLink().distance((link: any) => {
+      .d3Force('link', d3.forceLink().distance((link: unknown) => {
         // distance is determined by the color of the nodes and the link
         const baseDistance = 100;
         const l = link as Link;
@@ -307,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
         return baseDistance;
-      }).strength((link: any) => {
+      }).strength((link: unknown) => {
         const l = link as Link;
         switch (l.dashPattern) {
           case 'dotted':
@@ -323,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }))
       .d3Force('center', null) // center force is not intuitive when editing
-      .d3Force('collision', d3.forceCollide((node: any) => ((node as Node).size || DEFAULT_SIZE) + 1))
+      .d3Force('collision', d3.forceCollide((node: unknown) => ((node as Node).size || DEFAULT_SIZE) + 1))
       .width((document.getElementById('graph') as HTMLElement).offsetWidth)
       .height((document.getElementById('graph') as HTMLElement).offsetHeight);
 
@@ -505,9 +512,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateColorSelection(color: string) {
     const palette = document.getElementById('colorPalette') as HTMLElement;
     
-    // Check if the color is in our palette
-    const isPaletteColor = Array.from(palette.querySelectorAll('.color-option')).some(option => (option as HTMLElement).dataset.color === color);
-    
     // Update palette selection
     palette.querySelectorAll('.color-option').forEach(option => {
       (option as HTMLElement).classList.toggle('selected', (option as HTMLElement).dataset.color === color);
@@ -521,21 +525,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (xMark) {
       xMark.style.backgroundColor = color || DEFAULT_COLOR;
     }
-  }
-
-  // Helper function to get contrasting text color
-  function getContrastColor(hexColor: string) {
-    if (!hexColor) return '#000000';
-    // Convert hex to RGB
-    const r = parseInt(hexColor.slice(1, 3), 16);
-    const g = parseInt(hexColor.slice(3, 5), 16);
-    const b = parseInt(hexColor.slice(5, 7), 16);
-    
-    // Calculate relative luminance
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    
-    // Return black or white based on luminance
-    return luminance > 0.5 ? '#000000' : '#ffffff';
   }
 
   // Functions
@@ -578,10 +567,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const exed = (document.getElementById('nodeExed') as HTMLInputElement).checked;
 
     const uniqueLabel = getUniqueLabel(proposedLabel);
-
-    // Get current viewport dimensions
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
 
     // For the first node, place it at the origin
     let x = 0;
@@ -713,7 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
       Graph.onNodeClick((node: NodeObject, event: MouseEvent) => 
         handleNodeClickForLink(node as Node, event));
     } else {
-      Graph.onNodeClick((node: NodeObject, event: MouseEvent) =>
+      Graph.onNodeClick((node: NodeObject, _event: MouseEvent) =>
         handleNodeClick(node as Node));
     }
   }
@@ -937,11 +922,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Restart the simulation with animation
     Graph.d3ReheatSimulation();
-  }
-
-  function saveGraph(): void {
-    // Show the save graph modal
-    showSaveGraphModal();
   }
 
   function updateSaveSelectedButtonState(): void {
@@ -1209,10 +1189,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const reader = new FileReader();
       reader.onload = (event: ProgressEvent<FileReader>) => {
         try {
-          const graphData = JSON.parse((event.target as FileReader).result as string);
+          const graphData = JSON.parse((event.target as FileReader).result as string) as GraphData
           processGraphData(graphData);
-        } catch (error: any) {
-          showGraphError('Error loading graph: ' + error.message);
+        } catch (error: unknown) {
+          showGraphError('Error loading graph: ' + (error as Error).message);
         }
       };
       reader.readAsText(file);
@@ -1224,7 +1204,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // This function processes the graph data and updates the graph.
   // It is called when the user loads a graph and for the example graph on initialization.
   // Error handling needs to be done by the caller.
-  function processGraphData(graphData: any): void {
+  function processGraphData(graphData: GraphData): void {
     // Validate the loaded data
     if (!graphData.nodes || !graphData.links) {
       throw new Error('Invalid graph data format');
@@ -1283,11 +1263,13 @@ document.addEventListener('DOMContentLoaded', () => {
     gData.nodes.forEach(node => nodeMap.set(node.id, node));
 
     // Load links, converting source/target IDs to Node objects
-    graphData.links.forEach((
-      linkData: Omit<Link, 'source' | 'target'> &
-      { source: number, target: number }) => {
-      const sourceNode = nodeMap.get(linkData.source);
-      const targetNode = nodeMap.get(linkData.target);
+    graphData.links.forEach((linkData: Link) => {
+      // After this point, the numbers will be replaced with Node objects
+      // or else the Link will fail the explicit typechecks below.
+      const source = linkData.source as unknown as number;
+      const target = linkData.target as unknown as number;
+      const sourceNode = nodeMap.get(source);
+      const targetNode = nodeMap.get(target);
       if (sourceNode &&
           targetNode &&
           (!linkData.thickness || typeof linkData.thickness === 'number') &&
@@ -1305,7 +1287,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       } else {
         console.warn(
-          `Loaded link (${linkData.source} -> ${linkData.target}) failed type check.`);
+          `Loaded link (${source} -> ${target}) failed type check.`);
       }
     });
 
@@ -1415,7 +1397,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })
     .then(graphData => {
       // Use the existing loadGraph function to process the data
-      processGraphData(graphData);
+      processGraphData(graphData as GraphData);
     })
     .catch(error => {
       console.error('Error loading example graph:', error);
