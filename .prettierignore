@@ -1,0 +1,11 @@
+# Ignore config files that have specific formatting
+tsconfig.json
+*.config.js
+
+# Ignore data files
+example.json
+favicon.json
+
+# Ignore build output
+dist/
+node_modules/

@@ -16,12 +16,20 @@ lint:
 lint-fix:
 	npm run lint:fix
 
+# Format code with Prettier
+format:
+	npm run format
+
+# Check formatting without changes
+format-check:
+	npm run format:check
+
 # Build rule: use npm to build (esbuild)
 build:
 	npm run build
 
-# First clean; then check and lint; then build
-status: clean check lint build
+# First clean; then check, format, and lint; then build
+status: clean check format-check lint build
 
 # Can also use http-server with nodejs, but this is even easier...
 server:
