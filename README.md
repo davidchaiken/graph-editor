@@ -1,7 +1,8 @@
 # graph-editor
+
 Force-Directed Graph Editor
 
-This web application is a graph editor that uses the [force-graph library](https://github.com/vasturiano/force-graph/) with the [d3-force simulation library](https://d3js.org/d3-force). Much of the code was written with help from [Cursor](https://www.cursor.com/).
+This web application is a graph editor that uses the [force-graph library](https://github.com/vasturiano/force-graph/) with the [d3-force simulation library](https://d3js.org/d3-force). Much of the code was written with help from [Cursor](https://www.cursor.com/) and [Claude Code](https://www.anthropic.com/claude-code).
 
 The application has a canvas (drawing surface) that displays graphs that have nodes and links (undirected edges). While the force-graph and D3 libraries support large graphs, this application is intended to be used with relatively small graphs that are edited by humans.
 

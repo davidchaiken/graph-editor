@@ -19,8 +19,8 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import ForceGraph, { LinkObject, NodeObject } from 'force-graph';
 
-const APPLICATION_NAME = "graph-editor";
-const GRAPH_EDITOR_VERSION = "0.3";
+const APPLICATION_NAME = 'graph-editor';
+const GRAPH_EDITOR_VERSION = '0.3';
 
 const DEFAULT_COLOR = '#1f77b4';
 const DEFAULT_THICKNESS = 1;
@@ -28,7 +28,7 @@ const DEFAULT_SIZE = 5;
 
 const DASH_PATTERN_OPTIONS = ['solid', 'dotted', 'dashed', 'long-dashed', 'dash-dot'] as const;
 const DEFAULT_PATTERN = 'solid';
-type DashPattern = typeof DASH_PATTERN_OPTIONS[number];
+type DashPattern = (typeof DASH_PATTERN_OPTIONS)[number];
 
 function isDashPattern(dashPattern: string): dashPattern is DashPattern {
   return DASH_PATTERN_OPTIONS.includes(dashPattern as DashPattern);
@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Set initial opacity for Delete Node button
   (document.getElementById('deleteNodeBtn') as HTMLButtonElement).style.opacity = '0.5';
-  
+
   // Set initial state for Clear button
   (document.getElementById('clearGraphBtn') as HTMLButtonElement).disabled = true;
   (document.getElementById('clearGraphBtn') as HTMLButtonElement).style.opacity = '0.5';
@@ -137,218 +137,225 @@ document.addEventListener('DOMContentLoaded', () => {
   // Graph data
   const gData: GraphData = {
     nodes: [],
-    links: []
+    links: [],
   };
 
   // Initialize graph
-  const Graph = new ForceGraph(
-    document.getElementById('graph')!)
-      .graphData(gData)
-      .nodeId('id')
-      .nodeLabel('label')
-      .nodeColor('color')
-      .nodeVal('size')
-      .linkWidth('thickness')
-      .linkColor('color')
-      // Use a function to handle undefined labels
-      .linkLabel((link: LinkObject) => (link as Link).label || '')
-      .linkCanvasObject((linkobj: LinkObject, ctx: CanvasRenderingContext2D, globalScale: number) => {
-        const link = linkobj as Link;
-        const source: NodeObject = link.source as NodeObject;
-        const target: NodeObject = link.target as NodeObject;
-        
-        // Draw link
-        ctx.beginPath();
-        ctx.moveTo(source.x!, source.y!);
-        ctx.lineTo(target.x!, target.y!);
-        
-        // Set line style based on selection
-        if (link === selectedLink) {
-          // Glow effect for selected links
-          ctx.shadowBlur = 15;
-          ctx.shadowColor = link.color || DEFAULT_COLOR;
-          ctx.lineWidth = (link.thickness || DEFAULT_THICKNESS) * 0.75;
-        } else {
-          // Normal style for unselected links
-          ctx.shadowBlur = 0;
-          ctx.lineWidth = (link.thickness || DEFAULT_THICKNESS) * 0.5;
-        }
-        
-        // Set line dash pattern
-        switch(link.dashPattern) {
-          case 'dotted':
-            ctx.setLineDash([2, 2]);
-            break;
-          case 'dashed':
-            ctx.setLineDash([5, 5]);
-            break;
-          case 'long-dashed':
-            ctx.setLineDash([10, 3]);
-            break;
-          case 'dash-dot':
-            ctx.setLineDash([7, 2, 2, 2]);
-            break;
-          default: // 'solid'
-            ctx.setLineDash([]);
-        }
-        
-        ctx.strokeStyle = link.color || DEFAULT_COLOR;
-        ctx.stroke();
+  const Graph = new ForceGraph(document.getElementById('graph')!)
+    .graphData(gData)
+    .nodeId('id')
+    .nodeLabel('label')
+    .nodeColor('color')
+    .nodeVal('size')
+    .linkWidth('thickness')
+    .linkColor('color')
+    // Use a function to handle undefined labels
+    .linkLabel((link: LinkObject) => (link as Link).label || '')
+    .linkCanvasObject((linkobj: LinkObject, ctx: CanvasRenderingContext2D, globalScale: number) => {
+      const link = linkobj as Link;
+      const source: NodeObject = link.source as NodeObject;
+      const target: NodeObject = link.target as NodeObject;
 
-        // Draw link label if it exists
-        if (link.label) {
-          const midX = (source.x! + target.x!) / 2;
-          const midY = (source.y! + target.y!) / 2;
-          
-          // Calculate angle for text rotation
-          const angle = Math.atan2(target.y! - source.y!, target.x! - source.x!);
-          
-          // Save context state
-          ctx.save();
-          
-          // Move to midpoint and rotate
-          ctx.translate(midX, midY);
-          
-          // Adjust angle to keep text readable
-          // If the angle is in the bottom half of the circle, flip the text
-          const adjustedAngle = angle + (Math.abs(angle) > Math.PI/2 ? Math.PI : 0);
-          ctx.rotate(adjustedAngle);
-          
-          // Draw text
-          const fontSize = 12/globalScale;
-          ctx.font = `italic ${fontSize}px Sans-Serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillStyle = 'black';
-          ctx.fillText(link.label, 0, -10); // Offset text above the line
-          
-          // Restore context state
-          ctx.restore();
-        }
-      })
-      .onNodeClick((node: NodeObject, event: MouseEvent) => handleNodeClickForLink(node as Node, event))
-      .onNodeRightClick(handleNodeRightClick)
-      .onLinkClick(handleLinkClick)
-      .onBackgroundClick(() => {
-        selectedNode = null;
-        selectedLink = null;
-        // Only update the UI to reflect the cleared selection
-        const deleteNodeBtn = (document.getElementById('deleteNodeBtn') as HTMLButtonElement);
-        const deleteLinkBtn = (document.getElementById('deleteLinkBtn') as HTMLButtonElement);
-        deleteNodeBtn.disabled = true;
-        deleteNodeBtn.style.opacity = '0.5';
-        deleteLinkBtn.disabled = true;
-        deleteLinkBtn.style.opacity = '0.5';
-        // Clear link label input
-        (document.getElementById('linkLabel') as HTMLInputElement).value = '';
-        Graph.graphData(gData);
-      })
-      .onNodeDragEnd((node: NodeObject) => {
-        node.fx = node.x!;
-        node.fy = node.y!;
-        isGraphModified = true;
-        Graph.d3Force('center', null); // the user is taking control of the positions of nodes
-      })
-      .nodeCanvasObject((nodeobj: NodeObject, ctx: CanvasRenderingContext2D, globalScale: number) => {
-        const node = nodeobj as Node;
-        // Draw node
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, node.size || DEFAULT_SIZE, 0, 2 * Math.PI, false);
-        ctx.fillStyle = node.color || DEFAULT_COLOR;
-        ctx.fill();
+      // Draw link
+      ctx.beginPath();
+      ctx.moveTo(source.x!, source.y!);
+      ctx.lineTo(target.x!, target.y!);
 
-        // Add glow effect if node is selected
-        if (node === selectedNode) {
-          ctx.shadowBlur = 15;
-          ctx.shadowColor = node.color || DEFAULT_COLOR;
-          // Draw a slightly larger circle for the glow
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, (node.size || DEFAULT_SIZE) * 1.2, 0, 2 * Math.PI, false);
-          ctx.fillStyle = node.color || DEFAULT_COLOR;
-          ctx.fill();
-          // Reset shadow for the label
-          ctx.shadowBlur = 0;
-        }
+      // Set line style based on selection
+      if (link === selectedLink) {
+        // Glow effect for selected links
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = link.color || DEFAULT_COLOR;
+        ctx.lineWidth = (link.thickness || DEFAULT_THICKNESS) * 0.75;
+      } else {
+        // Normal style for unselected links
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = (link.thickness || DEFAULT_THICKNESS) * 0.5;
+      }
 
-        // Draw label
-        const label = node.label || '';
-        const fontSize = 12/globalScale;
-        ctx.font = `${fontSize}px Sans-Serif`;
+      // Set line dash pattern
+      switch (link.dashPattern) {
+        case 'dotted':
+          ctx.setLineDash([2, 2]);
+          break;
+        case 'dashed':
+          ctx.setLineDash([5, 5]);
+          break;
+        case 'long-dashed':
+          ctx.setLineDash([10, 3]);
+          break;
+        case 'dash-dot':
+          ctx.setLineDash([7, 2, 2, 2]);
+          break;
+        default: // 'solid'
+          ctx.setLineDash([]);
+      }
+
+      ctx.strokeStyle = link.color || DEFAULT_COLOR;
+      ctx.stroke();
+
+      // Draw link label if it exists
+      if (link.label) {
+        const midX = (source.x! + target.x!) / 2;
+        const midY = (source.y! + target.y!) / 2;
+
+        // Calculate angle for text rotation
+        const angle = Math.atan2(target.y! - source.y!, target.x! - source.x!);
+
+        // Save context state
+        ctx.save();
+
+        // Move to midpoint and rotate
+        ctx.translate(midX, midY);
+
+        // Adjust angle to keep text readable
+        // If the angle is in the bottom half of the circle, flip the text
+        const adjustedAngle = angle + (Math.abs(angle) > Math.PI / 2 ? Math.PI : 0);
+        ctx.rotate(adjustedAngle);
+
+        // Draw text
+        const fontSize = 12 / globalScale;
+        ctx.font = `italic ${fontSize}px Sans-Serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = 'black';
-        ctx.fillText(label, node.x, node.y + (node.size || DEFAULT_SIZE) + fontSize);
+        ctx.fillText(link.label, 0, -10); // Offset text above the line
 
-        // Draw X mark if node is marked
-        if (node.exed) {
-          const size = node.size || DEFAULT_SIZE;
-          const x = node.x;
-          const y = node.y;
-          
-          // Draw X mark
-          ctx.beginPath();
-          ctx.strokeStyle = 'black';
-          ctx.lineWidth = 2;
-          
-          // First diagonal
-          ctx.moveTo(x - size * 0.7, y - size * 0.7);
-          ctx.lineTo(x + size * 0.7, y + size * 0.7);
-          
-          // Second diagonal
-          ctx.moveTo(x + size * 0.7, y - size * 0.7);
-          ctx.lineTo(x - size * 0.7, y + size * 0.7);
-          
-          ctx.stroke();
-        }
-      })
-      .d3Force('charge', d3.forceManyBody().strength(-100))
-      .d3Force('link', d3.forceLink().distance((link: unknown) => {
-        // distance is determined by the color of the nodes and the link
-        const baseDistance = 100;
-        const l = link as Link;
-        if ((l.source).color === (l.target).color) {
-          if ((l.source).color == l.color) {
-            return baseDistance * 0.5; // node + link color makes nodes a lot more attractive
-          } else {
-            return baseDistance * 0.75; // node color makes nodes more attractive
+        // Restore context state
+        ctx.restore();
+      }
+    })
+    .onNodeClick((node: NodeObject, event: MouseEvent) => handleNodeClickForLink(node as Node, event))
+    .onNodeRightClick(handleNodeRightClick)
+    .onLinkClick(handleLinkClick)
+    .onBackgroundClick(() => {
+      selectedNode = null;
+      selectedLink = null;
+      // Only update the UI to reflect the cleared selection
+      const deleteNodeBtn = document.getElementById('deleteNodeBtn') as HTMLButtonElement;
+      const deleteLinkBtn = document.getElementById('deleteLinkBtn') as HTMLButtonElement;
+      deleteNodeBtn.disabled = true;
+      deleteNodeBtn.style.opacity = '0.5';
+      deleteLinkBtn.disabled = true;
+      deleteLinkBtn.style.opacity = '0.5';
+      // Clear link label input
+      (document.getElementById('linkLabel') as HTMLInputElement).value = '';
+      Graph.graphData(gData);
+    })
+    .onNodeDragEnd((node: NodeObject) => {
+      node.fx = node.x!;
+      node.fy = node.y!;
+      isGraphModified = true;
+      Graph.d3Force('center', null); // the user is taking control of the positions of nodes
+    })
+    .nodeCanvasObject((nodeobj: NodeObject, ctx: CanvasRenderingContext2D, globalScale: number) => {
+      const node = nodeobj as Node;
+      // Draw node
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, node.size || DEFAULT_SIZE, 0, 2 * Math.PI, false);
+      ctx.fillStyle = node.color || DEFAULT_COLOR;
+      ctx.fill();
+
+      // Add glow effect if node is selected
+      if (node === selectedNode) {
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = node.color || DEFAULT_COLOR;
+        // Draw a slightly larger circle for the glow
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, (node.size || DEFAULT_SIZE) * 1.2, 0, 2 * Math.PI, false);
+        ctx.fillStyle = node.color || DEFAULT_COLOR;
+        ctx.fill();
+        // Reset shadow for the label
+        ctx.shadowBlur = 0;
+      }
+
+      // Draw label
+      const label = node.label || '';
+      const fontSize = 12 / globalScale;
+      ctx.font = `${fontSize}px Sans-Serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'black';
+      ctx.fillText(label, node.x, node.y + (node.size || DEFAULT_SIZE) + fontSize);
+
+      // Draw X mark if node is marked
+      if (node.exed) {
+        const size = node.size || DEFAULT_SIZE;
+        const x = node.x;
+        const y = node.y;
+
+        // Draw X mark
+        ctx.beginPath();
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2;
+
+        // First diagonal
+        ctx.moveTo(x - size * 0.7, y - size * 0.7);
+        ctx.lineTo(x + size * 0.7, y + size * 0.7);
+
+        // Second diagonal
+        ctx.moveTo(x + size * 0.7, y - size * 0.7);
+        ctx.lineTo(x - size * 0.7, y + size * 0.7);
+
+        ctx.stroke();
+      }
+    })
+    .d3Force('charge', d3.forceManyBody().strength(-100))
+    .d3Force(
+      'link',
+      d3
+        .forceLink()
+        .distance((link: unknown) => {
+          // distance is determined by the color of the nodes and the link
+          const baseDistance = 100;
+          const l = link as Link;
+          if (l.source.color === l.target.color) {
+            if (l.source.color == l.color) {
+              return baseDistance * 0.5; // node + link color makes nodes a lot more attractive
+            } else {
+              return baseDistance * 0.75; // node color makes nodes more attractive
+            }
           }
-        }
-        return baseDistance;
-      }).strength((link: unknown) => {
-        const l = link as Link;
-        switch (l.dashPattern) {
-          case 'dotted':
-            return (l.thickness || DEFAULT_THICKNESS) * 0.02;
-          case 'dashed':
-            return (l.thickness || DEFAULT_THICKNESS) * 0.04;
-          case 'long-dashed':
-            return (l.thickness || DEFAULT_THICKNESS) * 0.06;
-          case 'dash-dot':
-            return (l.thickness || DEFAULT_THICKNESS) * 0.08;
-          default:
-            return (l.thickness || DEFAULT_THICKNESS) * 0.1;
-        }
-      }))
-      .d3Force('center', null) // center force is not intuitive when editing
-      .d3Force('collision', d3.forceCollide((node: unknown) => ((node as Node).size || DEFAULT_SIZE) + 1))
-      .width((document.getElementById('graph') as HTMLElement).offsetWidth)
-      .height((document.getElementById('graph') as HTMLElement).offsetHeight);
+          return baseDistance;
+        })
+        .strength((link: unknown) => {
+          const l = link as Link;
+          switch (l.dashPattern) {
+            case 'dotted':
+              return (l.thickness || DEFAULT_THICKNESS) * 0.02;
+            case 'dashed':
+              return (l.thickness || DEFAULT_THICKNESS) * 0.04;
+            case 'long-dashed':
+              return (l.thickness || DEFAULT_THICKNESS) * 0.06;
+            case 'dash-dot':
+              return (l.thickness || DEFAULT_THICKNESS) * 0.08;
+            default:
+              return (l.thickness || DEFAULT_THICKNESS) * 0.1;
+          }
+        })
+    )
+    .d3Force('center', null) // center force is not intuitive when editing
+    .d3Force(
+      'collision',
+      d3.forceCollide((node: unknown) => ((node as Node).size || DEFAULT_SIZE) + 1)
+    )
+    .width((document.getElementById('graph') as HTMLElement).offsetWidth)
+    .height((document.getElementById('graph') as HTMLElement).offsetHeight);
 
   // Initialize view
   Graph.centerAt(0, 0, 1000);
   Graph.zoom(1.5);
 
   // Set default color to first palette color
-  const defaultColor = ((document.querySelector('#colorPalette .color-option') as HTMLElement).dataset.color!) || DEFAULT_COLOR;
+  const defaultColor =
+    (document.querySelector('#colorPalette .color-option') as HTMLElement).dataset.color! || DEFAULT_COLOR;
   (document.getElementById('colorPicker') as HTMLInputElement).value = defaultColor;
   updateColorSelection(defaultColor);
 
   // Handle window resize
   window.addEventListener('resize', () => {
     const graphElement = document.getElementById('graph') as HTMLElement;
-    Graph
-      .width(graphElement.offsetWidth)
-      .height(graphElement.offsetHeight);
+    Graph.width(graphElement.offsetWidth).height(graphElement.offsetHeight);
   });
 
   // State variables
@@ -360,7 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let lastMouseY = 0;
 
   // Track mouse position
-  document.getElementById('graph')!.addEventListener('mousemove', (event) => {
+  document.getElementById('graph')!.addEventListener('mousemove', event => {
     const rect = (event.target as HTMLElement).getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
@@ -395,9 +402,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Add keyboard event handler for Delete and Backspace keys
   document.addEventListener('keydown', (event: KeyboardEvent) => {
-    if ((event.key === 'Delete' || event.key === 'Backspace') &&
-        document.activeElement !== (document.getElementById('nodeLabel') as HTMLInputElement) &&
-        document.activeElement !== (document.getElementById('linkLabel') as HTMLInputElement)) {
+    if (
+      (event.key === 'Delete' || event.key === 'Backspace') &&
+      document.activeElement !== (document.getElementById('nodeLabel') as HTMLInputElement) &&
+      document.activeElement !== (document.getElementById('linkLabel') as HTMLInputElement)
+    ) {
       if (selectedLink) {
         deleteLink();
       } else if (selectedNode) {
@@ -408,13 +417,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Add keyboard event handler for n key
   document.addEventListener('keydown', (event: KeyboardEvent) => {
-    if (event.key === 'n' &&
-        document.activeElement !== (document.getElementById('nodeLabel') as HTMLInputElement) &&
-        (document.activeElement as HTMLElement).tagName !== 'INPUT' &&
-        (document.activeElement as HTMLElement).tagName !== 'TEXTAREA') {
-
+    if (
+      event.key === 'n' &&
+      document.activeElement !== (document.getElementById('nodeLabel') as HTMLInputElement) &&
+      (document.activeElement as HTMLElement).tagName !== 'INPUT' &&
+      (document.activeElement as HTMLElement).tagName !== 'TEXTAREA'
+    ) {
       // Create a new node at the current mouse position
-      const proposedLabel = (document.getElementById('nodeLabel') as HTMLInputElement).value || 'Node ' + (gData.nodes.length + 1);
+      const proposedLabel =
+        (document.getElementById('nodeLabel') as HTMLInputElement).value || 'Node ' + (gData.nodes.length + 1);
       const size = parseInt((document.getElementById('nodeSize') as HTMLInputElement).value);
       const color = (document.getElementById('colorPicker') as HTMLInputElement).value;
       const exed = (document.getElementById('nodeExed') as HTMLInputElement).checked;
@@ -428,8 +439,8 @@ document.addEventListener('DOMContentLoaded', () => {
         exed,
         x: lastMouseX,
         y: lastMouseY,
-        fx: lastMouseX,  // Fix the node in place
-        fy: lastMouseY   // Fix the node in place
+        fx: lastMouseX, // Fix the node in place
+        fy: lastMouseY, // Fix the node in place
       };
 
       gData.nodes.push(newNode);
@@ -446,15 +457,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Add keyboard event handler for x key
   document.addEventListener('keydown', (event: KeyboardEvent) => {
-    if (event.key === 'x' &&
-        document.activeElement !== (document.getElementById('nodeLabel') as HTMLInputElement) &&
-        (document.activeElement as HTMLElement).tagName !== 'INPUT' &&
-        (document.activeElement as HTMLElement).tagName !== 'TEXTAREA') {
-      
-      const exedInput = (document.getElementById('nodeExed') as HTMLInputElement);
+    if (
+      event.key === 'x' &&
+      document.activeElement !== (document.getElementById('nodeLabel') as HTMLInputElement) &&
+      (document.activeElement as HTMLElement).tagName !== 'INPUT' &&
+      (document.activeElement as HTMLElement).tagName !== 'TEXTAREA'
+    ) {
+      const exedInput = document.getElementById('nodeExed') as HTMLInputElement;
       const newState = !exedInput.checked;
       exedInput.checked = newState;
-      
+
       // If a node is selected, update its state too
       if (selectedNode) {
         selectedNode.exed = newState;
@@ -511,12 +523,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Helper function to update color selection
   function updateColorSelection(color: string) {
     const palette = document.getElementById('colorPalette') as HTMLElement;
-    
+
     // Update palette selection
     palette.querySelectorAll('.color-option').forEach(option => {
       (option as HTMLElement).classList.toggle('selected', (option as HTMLElement).dataset.color === color);
     });
-    
+
     // Update color picker value
     (document.getElementById('colorPicker') as HTMLInputElement).value = color || DEFAULT_COLOR;
 
@@ -537,12 +549,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Check if label ends with a number
     const numberMatch = proposedLabel.match(/(.*?)(\d+)$/);
-    
+
     if (numberMatch) {
       // Label ends with a number
       const baseLabel = numberMatch[1]!.trim();
       const number = parseInt(numberMatch[2]!);
-      
+
       // Find the next available number
       let nextNumber = number + 1;
       while (existingLabels.has(`${baseLabel} ${nextNumber}`)) {
@@ -561,7 +573,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function addNode(): void {
-    const proposedLabel = (document.getElementById('nodeLabel') as HTMLInputElement).value || 'Node ' + (gData.nodes.length + 1);
+    const proposedLabel =
+      (document.getElementById('nodeLabel') as HTMLInputElement).value || 'Node ' + (gData.nodes.length + 1);
     const size = parseInt((document.getElementById('nodeSize') as HTMLInputElement).value);
     const color = (document.getElementById('colorPicker') as HTMLInputElement).value;
     const exed = (document.getElementById('nodeExed') as HTMLInputElement).checked;
@@ -592,8 +605,8 @@ document.addEventListener('DOMContentLoaded', () => {
       exed,
       x,
       y,
-      fx: x,  // Fix the node in place
-      fy: y   // Fix the node in place
+      fx: x, // Fix the node in place
+      fy: y, // Fix the node in place
     };
 
     gData.nodes.push(newNode);
@@ -614,9 +627,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const nodeIdToDelete = selectedNode.id;
 
     // Remove all links connected to the node
-    gData.links = gData.links.filter(link => 
-      link.source.id !== nodeIdToDelete && link.target.id !== nodeIdToDelete
-    );
+    gData.links = gData.links.filter(link => link.source.id !== nodeIdToDelete && link.target.id !== nodeIdToDelete);
 
     // Remove the node
     gData.nodes = gData.nodes.filter(node => node.id !== nodeIdToDelete);
@@ -661,13 +672,13 @@ document.addEventListener('DOMContentLoaded', () => {
     isGraphModified = true;
 
     // Check if source node has any remaining links
-    const sourceHasLinks = gData.links.some(link => 
-      link.source.id === sourceNode.id || link.target.id === sourceNode.id
+    const sourceHasLinks = gData.links.some(
+      link => link.source.id === sourceNode.id || link.target.id === sourceNode.id
     );
-    
+
     // Check if target node has any remaining links
-    const targetHasLinks = gData.links.some(link => 
-      link.source.id === targetNode.id || link.target.id === targetNode.id
+    const targetHasLinks = gData.links.some(
+      link => link.source.id === targetNode.id || link.target.id === targetNode.id
     );
 
     // Fix position of nodes that lost their last link
@@ -675,7 +686,7 @@ document.addEventListener('DOMContentLoaded', () => {
       sourceNode.fx = sourceNode.x!;
       sourceNode.fy = sourceNode.y!;
     }
-    
+
     if (!targetHasLinks) {
       targetNode.fx = targetNode.x!;
       targetNode.fy = targetNode.y!;
@@ -693,20 +704,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function toggleLinkCreation(event: Event) {
     isCreatingLink = (event.target as HTMLInputElement).checked;
-    
+
     if (isCreatingLink) {
-      Graph.onNodeClick((node: NodeObject, event: MouseEvent) => 
-        handleNodeClickForLink(node as Node, event));
+      Graph.onNodeClick((node: NodeObject, event: MouseEvent) => handleNodeClickForLink(node as Node, event));
     } else {
-      Graph.onNodeClick((node: NodeObject, _event: MouseEvent) =>
-        handleNodeClick(node as Node));
+      Graph.onNodeClick((node: NodeObject, _event: MouseEvent) => handleNodeClick(node as Node));
     }
   }
 
   // Helper function to get the current pattern from the selected style canvas
   function getCurrentPattern(): DashPattern {
     const selectedStyle = document.getElementById('selectedStyle');
-    return selectedStyle ? selectedStyle.dataset.pattern as DashPattern || DEFAULT_PATTERN : DEFAULT_PATTERN;
+    return selectedStyle ? (selectedStyle.dataset.pattern as DashPattern) || DEFAULT_PATTERN : DEFAULT_PATTERN;
   }
 
   function handleNodeClickForLink(node: Node, event: MouseEvent) {
@@ -718,9 +727,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (selectedNode && selectedNode !== node) {
       // Check if a link already exists between these nodes
       const selNode = selectedNode; // fix TypeScript selectedNode null check issue
-      const existingLink = gData.links.find(link => 
-        (link.source.id === selNode.id && link.target.id === node.id) ||
-        (link.source.id === node.id && link.target.id === selNode.id)
+      const existingLink = gData.links.find(
+        link =>
+          (link.source.id === selNode.id && link.target.id === node.id) ||
+          (link.source.id === node.id && link.target.id === selNode.id)
       );
 
       if (!existingLink) {
@@ -731,7 +741,7 @@ document.addEventListener('DOMContentLoaded', () => {
           thickness: parseInt((document.getElementById('linkThickness') as HTMLInputElement).value),
           color: (document.getElementById('colorPicker') as HTMLInputElement).value,
           label: (document.getElementById('linkLabel') as HTMLInputElement).value || undefined,
-          dashPattern: getCurrentPattern()
+          dashPattern: getCurrentPattern(),
         };
         gData.links.push(newLink);
         Graph.graphData(gData);
@@ -755,7 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return; // Exit early to prevent node selection
     }
-    
+
     // If no link was created or selected, select the clicked node
     handleNodeClick(node);
   }
@@ -789,26 +799,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     selectedLink = link;
     selectedNode = null;
-    
+
     // Update UI to reflect link selection
-    const deleteNodeBtn = (document.getElementById('deleteNodeBtn') as HTMLButtonElement);
-    const deleteLinkBtn = (document.getElementById('deleteLinkBtn') as HTMLButtonElement);
+    const deleteNodeBtn = document.getElementById('deleteNodeBtn') as HTMLButtonElement;
+    const deleteLinkBtn = document.getElementById('deleteLinkBtn') as HTMLButtonElement;
     deleteNodeBtn.disabled = true;
     deleteNodeBtn.style.opacity = '0.5';
     deleteLinkBtn.disabled = false;
     deleteLinkBtn.style.opacity = '1';
-    
+
     // Update link label input
     (document.getElementById('linkLabel') as HTMLInputElement).value = link.label || '';
-    
+
     // Update link dash pattern
     setSelectedStyle(link.dashPattern || DEFAULT_PATTERN);
-    
+
     // Update link thickness slider
-    const thicknessSlider = (document.getElementById('linkThickness') as HTMLInputElement);
+    const thicknessSlider = document.getElementById('linkThickness') as HTMLInputElement;
     thicknessSlider.value = link.thickness.toString();
     updateLinkThicknessPreview();
-    
+
     // Update color palette
     updateColorSelection(link.color);
 
@@ -818,10 +828,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateNodePropertiesUI(): void {
-    const labelInput = (document.getElementById('nodeLabel') as HTMLInputElement);
-    const sizeInput = (document.getElementById('nodeSize') as HTMLInputElement);
-    const exedInput = (document.getElementById('nodeExed') as HTMLInputElement);
-    const deleteBtn = (document.getElementById('deleteNodeBtn') as HTMLButtonElement);
+    const labelInput = document.getElementById('nodeLabel') as HTMLInputElement;
+    const sizeInput = document.getElementById('nodeSize') as HTMLInputElement;
+    const exedInput = document.getElementById('nodeExed') as HTMLInputElement;
+    const deleteBtn = document.getElementById('deleteNodeBtn') as HTMLButtonElement;
 
     if (selectedNode) {
       labelInput.value = selectedNode.label || '';
@@ -868,8 +878,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateLinkPropertiesUI(): void {
-    const thicknessInput = (document.getElementById('linkThickness') as HTMLInputElement);
-    const deleteBtn = (document.getElementById('deleteLinkBtn') as HTMLButtonElement);
+    const thicknessInput = document.getElementById('linkThickness') as HTMLInputElement;
+    const deleteBtn = document.getElementById('deleteLinkBtn') as HTMLButtonElement;
 
     if (selectedLink) {
       thicknessInput.value = selectedLink.thickness.toString();
@@ -893,7 +903,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateNodeSizePreview(): void {
     const size = (document.getElementById('nodeSize') as HTMLInputElement).value;
-    const sizeInput = (document.getElementById('nodeSize') as HTMLInputElement);
+    const sizeInput = document.getElementById('nodeSize') as HTMLInputElement;
     if (!sizeInput) return;
     const min = parseInt(sizeInput.min);
     const max = parseInt(sizeInput.max);
@@ -903,7 +913,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateLinkThicknessPreview(): void {
     const thickness = (document.getElementById('linkThickness') as HTMLInputElement).value;
-    const thicknessInput = (document.getElementById('linkThickness') as HTMLInputElement);
+    const thicknessInput = document.getElementById('linkThickness') as HTMLInputElement;
     const min = parseInt(thicknessInput.min);
     const max = parseInt(thicknessInput.max);
     const percent = ((parseInt(thickness) - min) / (max - min)) * 100;
@@ -916,30 +926,30 @@ document.addEventListener('DOMContentLoaded', () => {
       delete node.fx;
       delete node.fy;
     });
-    
+
     // Mark graph as modified
     isGraphModified = true;
-    
+
     // Restart the simulation with animation
     Graph.d3ReheatSimulation();
   }
 
   function updateSaveSelectedButtonState(): void {
-    const saveGraphFileInput = (document.getElementById('saveGraphFile') as HTMLInputElement);
-    const saveImageFileInput = (document.getElementById('saveImageFile') as HTMLInputElement);
-    const savePdfFileInput = (document.getElementById('savePdfFile') as HTMLInputElement);
-    const saveSelectedBtn = (document.getElementById('saveSelectedBtn') as HTMLButtonElement);
-    
+    const saveGraphFileInput = document.getElementById('saveGraphFile') as HTMLInputElement;
+    const saveImageFileInput = document.getElementById('saveImageFile') as HTMLInputElement;
+    const savePdfFileInput = document.getElementById('savePdfFile') as HTMLInputElement;
+    const saveSelectedBtn = document.getElementById('saveSelectedBtn') as HTMLButtonElement;
+
     if (!saveGraphFileInput || !saveImageFileInput || !savePdfFileInput || !saveSelectedBtn) {
       return;
     }
-    
+
     const states = {
       saveGraphFile: saveGraphFileInput.checked,
       saveImageFile: saveImageFileInput.checked,
-      savePdfFile: savePdfFileInput.checked
+      savePdfFile: savePdfFileInput.checked,
     };
-    
+
     // Disable button if no options are checked
     const shouldDisable = !(states.saveGraphFile || states.saveImageFile || states.savePdfFile);
     saveSelectedBtn.disabled = shouldDisable;
@@ -949,14 +959,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function showSaveGraphModal(): void {
     const modal = document.getElementById('saveGraphModal') as HTMLElement;
     modal.style.display = 'flex';
-    
+
     // Set JSON save option as checked by default only on first save
     const saveGraphFileInput = document.getElementById('saveGraphFile') as HTMLInputElement;
     if (saveGraphFileInput && isFirstSave) {
       saveGraphFileInput.checked = true;
       isFirstSave = false;
     }
-    
+
     // Add event listeners for the checkboxes
     const checkboxes = ['saveGraphFile', 'saveImageFile', 'savePdfFile'];
     checkboxes.forEach((id: string) => {
@@ -965,12 +975,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Remove any existing listeners
         checkbox.removeEventListener('change', updateSaveSelectedButtonState);
         // Add the new listener
-        checkbox.addEventListener('change', function(_event: Event) {
+        checkbox.addEventListener('change', function (_event: Event) {
           updateSaveSelectedButtonState();
         });
       }
     });
-    
+
     // Set initial button state
     updateSaveSelectedButtonState();
   }
@@ -1019,8 +1029,8 @@ document.addEventListener('DOMContentLoaded', () => {
       metadata: {
         application: APPLICATION_NAME,
         version: GRAPH_EDITOR_VERSION,
-        timestamp: new Date().toISOString().split('.')[0] + 'Z',  // Keep UTC for metadata
-        name: graphName
+        timestamp: new Date().toISOString().split('.')[0] + 'Z', // Keep UTC for metadata
+        name: graphName,
       },
       nodes: gData.nodes.map(node => {
         const nodeData: Node = {
@@ -1029,7 +1039,7 @@ document.addEventListener('DOMContentLoaded', () => {
           color: node.color,
           size: node.size,
           x: node.x,
-          y: node.y
+          y: node.y,
         };
         // Only include exed if it's true
         if (node.exed) {
@@ -1043,8 +1053,8 @@ document.addEventListener('DOMContentLoaded', () => {
         thickness: link.thickness,
         color: link.color,
         label: link.label,
-        dashPattern: link.dashPattern
-      }))
+        dashPattern: link.dashPattern,
+      })),
     };
 
     const jsonString = JSON.stringify(graphData, null, 2);
@@ -1053,9 +1063,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Generate date stamp in local time
     const now = new Date();
-    const dateStamp = now.getFullYear() +
+    const dateStamp =
+      now.getFullYear() +
       String(now.getMonth() + 1).padStart(2, '0') +
-      String(now.getDate()).padStart(2, '0') + 'T' +
+      String(now.getDate()).padStart(2, '0') +
+      'T' +
       String(now.getHours()).padStart(2, '0') +
       String(now.getMinutes()).padStart(2, '0') +
       String(now.getSeconds()).padStart(2, '0');
@@ -1072,29 +1084,31 @@ document.addEventListener('DOMContentLoaded', () => {
   function saveGraphAsImage(graphName: string): void {
     // Get the graph container
     const graphContainer = document.getElementById('graph')!;
-    
+
     // Store and remove the pattern canvases
     const styleOptions = document.getElementById('styleOptions')!;
     const patternCanvases = Array.from(styleOptions.querySelectorAll('canvas'));
     patternCanvases.forEach(canvas => canvas.remove());
-    
+
     // Use html2canvas to capture the graph
     html2canvas(graphContainer, {
       useCORS: true,
-      allowTaint: true
+      allowTaint: true,
     }).then((canvas: HTMLCanvasElement) => {
       // Restore the pattern canvases
       patternCanvases.forEach((canvas: HTMLCanvasElement) => styleOptions.appendChild(canvas));
-      
+
       // Generate date stamp in local time
       const now = new Date();
-      const dateStamp = now.getFullYear() +
+      const dateStamp =
+        now.getFullYear() +
         String(now.getMonth() + 1).padStart(2, '0') +
-        String(now.getDate()).padStart(2, '0') + 'T' +
+        String(now.getDate()).padStart(2, '0') +
+        'T' +
         String(now.getHours()).padStart(2, '0') +
         String(now.getMinutes()).padStart(2, '0') +
         String(now.getSeconds()).padStart(2, '0');
-      
+
       // Convert canvas to blob
       canvas.toBlob((blob: Blob | null) => {
         const url = URL.createObjectURL(blob!);
@@ -1112,65 +1126,57 @@ document.addEventListener('DOMContentLoaded', () => {
   function saveGraphAsPdf(graphName: string): void {
     // Get the graph container
     const graphContainer = document.getElementById('graph')!;
-    
+
     // Store and remove the pattern canvases
     const styleOptions = document.getElementById('styleOptions')!;
     const patternCanvases = Array.from(styleOptions.querySelectorAll('canvas'));
     patternCanvases.forEach(canvas => canvas.remove());
-    
+
     // Use html2canvas to capture the graph
     html2canvas(graphContainer, {
       useCORS: true,
-      allowTaint: true
+      allowTaint: true,
     }).then((canvas: HTMLCanvasElement) => {
       // Restore the pattern canvases
       patternCanvases.forEach((canvas: HTMLCanvasElement) => styleOptions.appendChild(canvas));
-      
+
       // Generate date stamp in local time
       const now = new Date();
-      const dateStamp = now.getFullYear() +
+      const dateStamp =
+        now.getFullYear() +
         String(now.getMonth() + 1).padStart(2, '0') +
-        String(now.getDate()).padStart(2, '0') + 'T' +
+        String(now.getDate()).padStart(2, '0') +
+        'T' +
         String(now.getHours()).padStart(2, '0') +
         String(now.getMinutes()).padStart(2, '0') +
         String(now.getSeconds()).padStart(2, '0');
-      
+
       // Create PDF using the imported jsPDF
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'in',
-        format: 'letter'
+        format: 'letter',
       });
-      
+
       // Calculate dimensions to fit on US Letter landscape with some padding
       const letterWidth = 11; // US Letter width in inches
       const letterHeight = 8.5; // US Letter height in inches
       const padding = 0.4; // padding in inches
-      
+
       // Calculate scale to fit the canvas on US Letter while maintaining aspect ratio
-      const scale = Math.min(
-        (letterWidth - padding * 2) / canvas.width,
-        (letterHeight - padding * 2) / canvas.height
-      );
-      
+      const scale = Math.min((letterWidth - padding * 2) / canvas.width, (letterHeight - padding * 2) / canvas.height);
+
       // Calculate dimensions after scaling
       const scaledWidth = canvas.width * scale;
       const scaledHeight = canvas.height * scale;
-      
+
       // Calculate centering offsets
       const xOffset = (letterWidth - scaledWidth) / 2;
       const yOffset = (letterHeight - scaledHeight) / 2;
-      
+
       // Add the image to the PDF with calculated dimensions and position
-      pdf.addImage(
-        canvas.toDataURL('image/png'),
-        'PNG',
-        xOffset,
-        yOffset,
-        scaledWidth,
-        scaledHeight
-      );
-      
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', xOffset, yOffset, scaledWidth, scaledHeight);
+
       // Save the PDF
       pdf.save(`${graphName}-${dateStamp}.pdf`);
     });
@@ -1180,8 +1186,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Create a file input element
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.graph,.json';  // Accept both .graph and .json for backward compatibility
-    
+    input.accept = '.graph,.json'; // Accept both .graph and .json for backward compatibility
+
     input.onchange = (e: Event) => {
       const file = (e.target as HTMLInputElement).files![0];
       if (!file) return;
@@ -1189,7 +1195,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const reader = new FileReader();
       reader.onload = (event: ProgressEvent<FileReader>) => {
         try {
-          const graphData = JSON.parse((event.target as FileReader).result as string) as GraphData
+          const graphData = JSON.parse((event.target as FileReader).result as string) as GraphData;
           processGraphData(graphData);
         } catch (error: unknown) {
           showGraphError('Error loading graph: ' + (error as Error).message);
@@ -1197,7 +1203,7 @@ document.addEventListener('DOMContentLoaded', () => {
       };
       reader.readAsText(file);
     };
-    
+
     input.click();
   }
 
@@ -1232,15 +1238,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load nodes
     graphData.nodes.forEach((nodeData: Node) => {
-      if (nodeData.id &&
-          typeof nodeData.id === 'number' &&
-          nodeData.x &&
-          typeof nodeData.x === 'number' &&
-          nodeData.y &&
-          typeof nodeData.y === 'number' &&
-          (!nodeData.label || typeof nodeData.label === 'string') &&
-          (!nodeData.color || typeof nodeData.color === 'string') &&
-          (!nodeData.size || typeof nodeData.size === 'number')
+      if (
+        nodeData.id &&
+        typeof nodeData.id === 'number' &&
+        nodeData.x &&
+        typeof nodeData.x === 'number' &&
+        nodeData.y &&
+        typeof nodeData.y === 'number' &&
+        (!nodeData.label || typeof nodeData.label === 'string') &&
+        (!nodeData.color || typeof nodeData.color === 'string') &&
+        (!nodeData.size || typeof nodeData.size === 'number')
       ) {
         gData.nodes.push({
           id: nodeData.id,
@@ -1249,9 +1256,9 @@ document.addEventListener('DOMContentLoaded', () => {
           size: nodeData.size || DEFAULT_SIZE,
           x: nodeData.x,
           y: nodeData.y,
-          fx: nodeData.x,  // Fix the node in its loaded position
-          fy: nodeData.y,  // Fix the node in its loaded position
-          exed: !!nodeData.exed
+          fx: nodeData.x, // Fix the node in its loaded position
+          fy: nodeData.y, // Fix the node in its loaded position
+          exed: !!nodeData.exed,
         });
       } else {
         console.warn(`Loaded node (${nodeData.id}) failed type check.`);
@@ -1270,24 +1277,24 @@ document.addEventListener('DOMContentLoaded', () => {
       const target = linkData.target as unknown as number;
       const sourceNode = nodeMap.get(source);
       const targetNode = nodeMap.get(target);
-      if (sourceNode &&
-          targetNode &&
-          (!linkData.thickness || typeof linkData.thickness === 'number') &&
-          (!linkData.color || typeof linkData.color === 'string') &&
-          (!linkData.label || typeof linkData.label === 'string') &&
-          (!linkData.dashPattern || isDashPattern(linkData.dashPattern))
-        ) {
+      if (
+        sourceNode &&
+        targetNode &&
+        (!linkData.thickness || typeof linkData.thickness === 'number') &&
+        (!linkData.color || typeof linkData.color === 'string') &&
+        (!linkData.label || typeof linkData.label === 'string') &&
+        (!linkData.dashPattern || isDashPattern(linkData.dashPattern))
+      ) {
         gData.links.push({
           source: sourceNode,
           target: targetNode,
           thickness: linkData.thickness || DEFAULT_THICKNESS,
           color: linkData.color || DEFAULT_COLOR,
           ...(linkData.label && { label: linkData.label }),
-          ...(linkData.dashPattern && {dashPattern: linkData.dashPattern })
+          ...(linkData.dashPattern && { dashPattern: linkData.dashPattern }),
         });
       } else {
-        console.warn(
-          `Loaded link (${source} -> ${target}) failed type check.`);
+        console.warn(`Loaded link (${source} -> ${target}) failed type check.`);
       }
     });
 
@@ -1311,7 +1318,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Calculate bounds of the loaded graph
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
     gData.nodes.forEach(node => {
       minX = Math.min(minX, node.x);
       minY = Math.min(minY, node.y);
@@ -1329,21 +1339,21 @@ document.addEventListener('DOMContentLoaded', () => {
         (window.innerWidth - 250) / (width + 100), // Account for sidebar and padding
         window.innerHeight / (height + 100)
       );
-      Graph.d3Force('center', null) // center force is not intuitive when editing
+      Graph.d3Force('center', null); // center force is not intuitive when editing
       Graph.centerAt(centerX, centerY, 1000);
       Graph.zoom(scale * 0.8); // Zoom to 80% of the calculated scale to add some padding
     }
   }
 
   function showGraphError(message: string): void {
-    const errorDiv = (document.getElementById('graphError') as HTMLElement);
-    const messageSpan = (document.getElementById('errorMessage') as HTMLElement);
+    const errorDiv = document.getElementById('graphError') as HTMLElement;
+    const messageSpan = document.getElementById('errorMessage') as HTMLElement;
     messageSpan.textContent = message;
     errorDiv.style.display = 'block';
   }
 
   function hideGraphError(): void {
-    const errorDiv = (document.getElementById('graphError') as HTMLElement);
+    const errorDiv = document.getElementById('graphError') as HTMLElement;
     errorDiv.style.display = 'none';
   }
 
@@ -1359,29 +1369,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // Clear graph data
     gData.nodes = [];
     gData.links = [];
-    
+
     // Reset state variables
     selectedNode = null;
     selectedLink = null;
     isCreatingLink = true;
     nextNodeId = 1;
     isGraphModified = false;
-    
+
     // Reset view
     Graph.centerAt(0, 0, 1000);
     Graph.zoom(1.5);
-    
+
     // Update graph and UI
     Graph.graphData(gData);
     updateNodePropertiesUI();
     updateLinkPropertiesUI();
-    
+
     // Reset node label input
     (document.getElementById('nodeLabel') as HTMLInputElement).value = '';
-    
+
     // Reset graph name
     (document.getElementById('graphName') as HTMLInputElement).value = '';
-    
+
     // Disable Clear button
     (document.getElementById('clearGraphBtn') as HTMLButtonElement).disabled = true;
     (document.getElementById('clearGraphBtn') as HTMLButtonElement).style.opacity = '0.5';
@@ -1425,22 +1435,29 @@ document.addEventListener('DOMContentLoaded', () => {
    * @returns {void}
    */
   function drawPattern(canvas: HTMLCanvasElement, pattern: DashPattern): void {
-    const ctx = (canvas.getContext('2d'))!;
+    const ctx = canvas.getContext('2d')!;
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width;
     canvas.height = rect.height;
-    
+
     // Clear the canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     // Draw the pattern
     ctx.beginPath();
-    ctx.setLineDash(pattern === 'dotted' ? [1, 3] :
-                   pattern === 'dashed' ? [6, 4] :
-                   pattern === 'long-dashed' ? [12, 4] :
-                   pattern === 'dash-dot' ? [8, 3, 2, 3] : []);
-    ctx.moveTo(10, canvas.height/2);
-    ctx.lineTo(canvas.width - 10, canvas.height/2);
+    ctx.setLineDash(
+      pattern === 'dotted'
+        ? [1, 3]
+        : pattern === 'dashed'
+          ? [6, 4]
+          : pattern === 'long-dashed'
+            ? [12, 4]
+            : pattern === 'dash-dot'
+              ? [8, 3, 2, 3]
+              : []
+    );
+    ctx.moveTo(10, canvas.height / 2);
+    ctx.lineTo(canvas.width - 10, canvas.height / 2);
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 2;
     ctx.stroke();
@@ -1452,9 +1469,9 @@ document.addEventListener('DOMContentLoaded', () => {
    * @returns {void}
    */
   function setSelectedStyle(pattern: DashPattern): void {
-    const selectedStyle = (document.getElementById('selectedStyle') as HTMLCanvasElement);
+    const selectedStyle = document.getElementById('selectedStyle') as HTMLCanvasElement;
     if (!selectedStyle) return;
-    
+
     drawPattern(selectedStyle, pattern);
     selectedStyle.dataset.pattern = pattern;
   }
@@ -1468,13 +1485,13 @@ document.addEventListener('DOMContentLoaded', () => {
   function initPatternOption(canvas: HTMLCanvasElement, pattern: DashPattern): void {
     drawPattern(canvas, pattern);
     canvas.dataset.pattern = pattern;
-    
+
     // Handle click on option
-    canvas.onclick = function(e) {
+    canvas.onclick = function (e) {
       e.stopPropagation();
       setSelectedStyle(pattern);
       (document.getElementById('styleOptions') as HTMLElement).style.display = 'none';
-      
+
       // Update selected link if one is selected
       if (selectedLink) {
         selectedLink.dashPattern = pattern;
@@ -1500,16 +1517,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (selectedStyle && selectedStyleBtn) {
       // Set initial pattern
       setSelectedStyle(DEFAULT_PATTERN);
-      
+
       // Handle click on button
-      selectedStyleBtn.onclick = function(e) {
+      selectedStyleBtn.onclick = function (e) {
         e.stopPropagation();
         const options = document.getElementById('styleOptions')!;
-        
+
         if (options.style.display === 'none') {
           // Show options first so we can get their dimensions
           options.style.display = 'block';
-          
+
           // Initialize all option canvases
           document.querySelectorAll('#styleOptions canvas').forEach(canvas => {
             initPatternOption(canvas as HTMLCanvasElement, (canvas as HTMLElement).dataset.pattern! as DashPattern);
@@ -1526,7 +1543,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Handle window resize
-    window.addEventListener('resize', function() {
+    window.addEventListener('resize', function () {
       // Redraw all canvases when window is resized
       setSelectedStyle(getCurrentPattern());
       document.querySelectorAll('#styleOptions canvas').forEach(canvas => {
@@ -1535,7 +1552,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Close dropdown when clicking outside
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
       const dropdown = document.querySelector('.line-pattern-dropdown');
       if (dropdown && !dropdown.contains(e.target as globalThis.Node)) {
         document.getElementById('styleOptions')!.style.display = 'none';
@@ -1545,7 +1562,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Make sure we initialize after DOM is loaded
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
       initLinePatternDropdown();
     });
   } else {
