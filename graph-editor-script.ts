@@ -166,11 +166,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Glow effect for selected links
         ctx.shadowBlur = 15;
         ctx.shadowColor = link.color || DEFAULT_COLOR;
-        ctx.lineWidth = (link.thickness || DEFAULT_THICKNESS) * 0.75;
+        ctx.lineWidth = link.thickness * 0.75;
       } else {
         // Normal style for unselected links
         ctx.shadowBlur = 0;
-        ctx.lineWidth = (link.thickness || DEFAULT_THICKNESS) * 0.5;
+        ctx.lineWidth = link.thickness * 0.5;
       }
 
       // Set line dash pattern
@@ -306,31 +306,52 @@ document.addEventListener('DOMContentLoaded', () => {
       d3
         .forceLink()
         .distance((link: unknown) => {
-          // distance is determined by the color of the nodes and the link
-          const baseDistance = 100;
           const l = link as Link;
+          const baseDistance = 100;
+          const delta = (baseDistance / 10) * l.thickness;
+          let distance = baseDistance;
+
+          // distance is determined by the color of the nodes and the link
+          switch (l.dashPattern) {
+            case 'dotted': // strong repulsion
+              distance = 5 * baseDistance + delta;
+              break;
+            case 'dashed': // repulsion
+              distance = 4 * baseDistance + delta;
+              break;
+            case 'long-dashed': // neutral
+              distance = 3 * baseDistance;
+              break;
+            case 'dash-dot': // attraction
+              distance = 2 * baseDistance - delta;
+              break;
+            default: // solid, strong attraction
+              distance = baseDistance - delta;
+              break;
+          }
+
           if (l.source.color === l.target.color) {
             if (l.source.color == l.color) {
-              return baseDistance * 0.5; // node + link color makes nodes a lot more attractive
+              return distance * 0.5; // node + link color makes nodes a lot more attractive
             } else {
-              return baseDistance * 0.75; // node color makes nodes more attractive
+              return distance * 0.75; // node color makes nodes more attractive
             }
           }
-          return baseDistance;
+          return distance;
         })
         .strength((link: unknown) => {
           const l = link as Link;
           switch (l.dashPattern) {
             case 'dotted':
-              return (l.thickness || DEFAULT_THICKNESS) * 0.02;
+              return l.thickness * 0.1; // strong repulsion force
             case 'dashed':
-              return (l.thickness || DEFAULT_THICKNESS) * 0.04;
+              return l.thickness * 0.075; // repulsion force
             case 'long-dashed':
-              return (l.thickness || DEFAULT_THICKNESS) * 0.06;
+              return l.thickness * 0.05; // neutral force
             case 'dash-dot':
-              return (l.thickness || DEFAULT_THICKNESS) * 0.08;
+              return l.thickness * 0.075; // attraction force
             default:
-              return (l.thickness || DEFAULT_THICKNESS) * 0.1;
+              return l.thickness * 0.1; // strong attraction force
           }
         })
     )
@@ -502,7 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Add event listener for link thickness changes
   document.getElementById('linkThickness')!.addEventListener('input', (e: Event) => {
     if (selectedLink) {
-      selectedLink.thickness = parseInt((e.target as HTMLInputElement).value);
+      selectedLink.thickness = parseInt((e.target as HTMLInputElement).value) || DEFAULT_THICKNESS;
       isGraphModified = true;
       Graph.graphData(gData);
     }
@@ -738,7 +759,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const newLink = {
           source: selectedNode,
           target: node,
-          thickness: parseInt((document.getElementById('linkThickness') as HTMLInputElement).value),
+          thickness:
+            parseInt((document.getElementById('linkThickness') as HTMLInputElement).value) || DEFAULT_THICKNESS,
           color: (document.getElementById('colorPicker') as HTMLInputElement).value,
           label: (document.getElementById('linkLabel') as HTMLInputElement).value || undefined,
           dashPattern: getCurrentPattern(),
@@ -888,7 +910,7 @@ document.addEventListener('DOMContentLoaded', () => {
       deleteBtn.style.opacity = '1';
       thicknessInput.addEventListener('input', () => {
         if (selectedLink) {
-          selectedLink.thickness = parseInt(thicknessInput.value);
+          selectedLink.thickness = parseInt(thicknessInput.value) || DEFAULT_THICKNESS;
           isGraphModified = true;
           Graph.graphData(gData);
         }
