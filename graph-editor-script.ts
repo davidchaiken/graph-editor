@@ -44,6 +44,7 @@ interface Node extends NodeObject {
   size: number;
   x: number;
   y: number;
+  nlinks: number;
   fx?: number;
   fy?: number;
   exed?: boolean;
@@ -307,23 +308,23 @@ document.addEventListener('DOMContentLoaded', () => {
         .forceLink()
         .distance((link: unknown) => {
           const l = link as Link;
-          const baseDistance = 100;
-          const delta = (baseDistance / 10) * l.thickness;
+          const baseDistance = 100 + Math.min(l.source.nlinks, l.target.nlinks) * 10;
+          const delta = (baseDistance  * l.thickness) / 100;
           let distance = baseDistance;
 
           // distance is determined by the color of the nodes and the link
           switch (l.dashPattern) {
             case 'dotted': // strong repulsion
-              distance = 5 * baseDistance + delta;
+              distance = 3 * baseDistance + delta;
               break;
             case 'dashed': // repulsion
-              distance = 4 * baseDistance + delta;
+              distance = 2.5 * baseDistance + delta;
               break;
             case 'long-dashed': // neutral
-              distance = 3 * baseDistance;
+              distance = 2 * baseDistance;
               break;
             case 'dash-dot': // attraction
-              distance = 2 * baseDistance - delta;
+              distance = 1.5 * baseDistance - delta;
               break;
             default: // solid, strong attraction
               distance = baseDistance - delta;
@@ -341,17 +342,18 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .strength((link: unknown) => {
           const l = link as Link;
+          const divisor = Math.min(l.source.nlinks, l.target.nlinks) || 10;
           switch (l.dashPattern) {
             case 'dotted':
-              return l.thickness * 0.1; // strong repulsion force
+              return l.thickness / divisor; // strong repulsion force
             case 'dashed':
-              return l.thickness * 0.075; // repulsion force
+              return l.thickness * 0.75 / divisor; // repulsion force
             case 'long-dashed':
-              return l.thickness * 0.05; // neutral force
+              return l.thickness * 0.5 / divisor; // neutral force
             case 'dash-dot':
-              return l.thickness * 0.075; // attraction force
+              return l.thickness * 0.75 / divisor; // attraction force
             default:
-              return l.thickness * 0.1; // strong attraction force
+              return l.thickness / divisor; // strong attraction force
           }
         })
     )
@@ -462,6 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
         y: lastMouseY,
         fx: lastMouseX, // Fix the node in place
         fy: lastMouseY, // Fix the node in place
+        nlinks: 0,
       };
 
       gData.nodes.push(newNode);
@@ -628,6 +631,7 @@ document.addEventListener('DOMContentLoaded', () => {
       y,
       fx: x, // Fix the node in place
       fy: y, // Fix the node in place
+      nlinks: 0,
     };
 
     gData.nodes.push(newNode);
@@ -647,7 +651,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Store the node ID before deletion
     const nodeIdToDelete = selectedNode.id;
 
-    // Remove all links connected to the node
+    // Remove all links connected to the node and update nlinks for connected nodes
+    gData.links.forEach(link => {
+      if (link.source.id === nodeIdToDelete) {
+        link.target.nlinks--;
+      }
+      if (link.target.id === nodeIdToDelete) {
+        link.source.nlinks--;
+      }
+    });
     gData.links = gData.links.filter(link => link.source.id !== nodeIdToDelete && link.target.id !== nodeIdToDelete);
 
     // Remove the node
@@ -686,7 +698,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const sourceNode = selectedLink.source;
     const targetNode = selectedLink.target;
 
-    // Remove the link from the array
+    // Remove the link from the array and update nlinks for source and target nodes
+    sourceNode.nlinks--;
+    targetNode.nlinks--;
     gData.links = gData.links.filter(link => link !== selectedLink);
 
     // Mark graph as modified
@@ -765,6 +779,8 @@ document.addEventListener('DOMContentLoaded', () => {
           label: (document.getElementById('linkLabel') as HTMLInputElement).value || undefined,
           dashPattern: getCurrentPattern(),
         };
+        selectedNode.nlinks++;
+        node.nlinks++;
         gData.links.push(newLink);
         Graph.graphData(gData);
 
@@ -1062,6 +1078,7 @@ document.addEventListener('DOMContentLoaded', () => {
           size: node.size,
           x: node.x,
           y: node.y,
+          nlinks: node.nlinks, // TODO: decide whether to save
         };
         // Only include exed if it's true
         if (node.exed) {
@@ -1281,6 +1298,7 @@ document.addEventListener('DOMContentLoaded', () => {
           fx: nodeData.x, // Fix the node in its loaded position
           fy: nodeData.y, // Fix the node in its loaded position
           exed: !!nodeData.exed,
+          nlinks: 0,
         });
       } else {
         console.warn(`Loaded node (${nodeData.id}) failed type check.`);
@@ -1307,6 +1325,8 @@ document.addEventListener('DOMContentLoaded', () => {
         (!linkData.label || typeof linkData.label === 'string') &&
         (!linkData.dashPattern || isDashPattern(linkData.dashPattern))
       ) {
+        sourceNode.nlinks++;
+        targetNode.nlinks++;
         gData.links.push({
           source: sourceNode,
           target: targetNode,
