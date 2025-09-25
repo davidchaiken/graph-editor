@@ -308,23 +308,23 @@ document.addEventListener('DOMContentLoaded', () => {
         .forceLink()
         .distance((link: unknown) => {
           const l = link as Link;
-          const baseDistance = 100 + Math.min(l.source.nlinks, l.target.nlinks) * 10;
-          const delta = (baseDistance  * l.thickness) / 100;
-          let distance = baseDistance;
+          const baseDistance = 100 + ((l.source.nlinks + l.target.nlinks) * 10);
+          const delta = (baseDistance * l.thickness) / 10;
+          let distance: number;
 
           // distance is determined by the color of the nodes and the link
           switch (l.dashPattern) {
             case 'dotted': // strong repulsion
-              distance = 3 * baseDistance + delta;
-              break;
-            case 'dashed': // repulsion
               distance = 2.5 * baseDistance + delta;
               break;
+            case 'dashed': // repulsion
+              distance = 1.75 * baseDistance + delta;
+              break;
             case 'long-dashed': // neutral
-              distance = 2 * baseDistance;
+              distance = 1.5 * baseDistance;
               break;
             case 'dash-dot': // attraction
-              distance = 1.5 * baseDistance - delta;
+              distance = 1.25 * baseDistance - delta;
               break;
             default: // solid, strong attraction
               distance = baseDistance - delta;
@@ -342,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .strength((link: unknown) => {
           const l = link as Link;
-          const divisor = Math.min(l.source.nlinks, l.target.nlinks) || 10;
+          const divisor = (l.source.nlinks + l.target.nlinks) / 2;
           switch (l.dashPattern) {
             case 'dotted':
               return l.thickness / divisor; // strong repulsion force
@@ -1078,7 +1078,7 @@ document.addEventListener('DOMContentLoaded', () => {
           size: node.size,
           x: node.x,
           y: node.y,
-          nlinks: node.nlinks, // TODO: decide whether to save
+          nlinks: node.nlinks,
         };
         // Only include exed if it's true
         if (node.exed) {
@@ -1298,7 +1298,7 @@ document.addEventListener('DOMContentLoaded', () => {
           fx: nodeData.x, // Fix the node in its loaded position
           fy: nodeData.y, // Fix the node in its loaded position
           exed: !!nodeData.exed,
-          nlinks: 0,
+          nlinks: 0, // nlinks value is recalculated below
         });
       } else {
         console.warn(`Loaded node (${nodeData.id}) failed type check.`);
