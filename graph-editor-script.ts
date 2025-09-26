@@ -307,8 +307,13 @@ document.addEventListener('DOMContentLoaded', () => {
       d3
         .forceLink()
         .distance((link: unknown) => {
+          // This node distance calculation is based on the number of links of the
+          // source and target nodes, the link thickness, the link pattern, the color
+          // of the link, and the color of the source and target nodes. It combines with
+          // the strength calculation below to try to provide control to the user while
+          // still maintaining a good layout.
           const l = link as Link;
-          const baseDistance = 100 + ((l.source.nlinks + l.target.nlinks) * 10);
+          const baseDistance = 100 + (l.source.nlinks + l.target.nlinks) * 10;
           const delta = (baseDistance * l.thickness) / 10;
           let distance: number;
 
@@ -341,17 +346,25 @@ document.addEventListener('DOMContentLoaded', () => {
           return distance;
         })
         .strength((link: unknown) => {
+          // The default strength in the d3-force library is:
+          //   1 / Math.min(count(link.source), count(link.target));
+          // Reference: https://d3js.org/d3-force/link#link_strength
+          // The strength calculation below takes several factors into account:
+          // the link thinkness, the link pattern, and the number of links
+          // attached to both the source and target nodes. Reducing the strength
+          // based on the average of the source and target node links helps provide
+          // space in dense parts of the graph.
           const l = link as Link;
           const divisor = (l.source.nlinks + l.target.nlinks) / 2;
           switch (l.dashPattern) {
             case 'dotted':
               return l.thickness / divisor; // strong repulsion force
             case 'dashed':
-              return l.thickness * 0.75 / divisor; // repulsion force
+              return (l.thickness * 0.75) / divisor; // repulsion force
             case 'long-dashed':
-              return l.thickness * 0.5 / divisor; // neutral force
+              return (l.thickness * 0.5) / divisor; // neutral force
             case 'dash-dot':
-              return l.thickness * 0.75 / divisor; // attraction force
+              return (l.thickness * 0.75) / divisor; // attraction force
             default:
               return l.thickness / divisor; // strong attraction force
           }
@@ -1507,11 +1520,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Pattern to label mapping
   const patternLabels: Record<DashPattern, string> = {
-    'solid': 'Strong Attract',
+    solid: 'Strong Attract',
     'dash-dot': 'Weak Attract',
     'long-dashed': 'Neutral',
-    'dashed': 'Weak Repel',
-    'dotted': 'Strong Repel'
+    dashed: 'Weak Repel',
+    dotted: 'Strong Repel',
   };
 
   /**
@@ -1522,12 +1535,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function setSelectedStyle(pattern: DashPattern): void {
     const selectedStyle = document.getElementById('selectedStyle') as HTMLCanvasElement;
     const selectedStyleLabel = document.getElementById('selectedStyleLabel') as HTMLSpanElement;
-    
+
     if (!selectedStyle) return;
 
     drawPattern(selectedStyle, pattern);
     selectedStyle.dataset.pattern = pattern;
-    
+
     // Update the label text
     if (selectedStyleLabel) {
       selectedStyleLabel.textContent = patternLabels[pattern];
