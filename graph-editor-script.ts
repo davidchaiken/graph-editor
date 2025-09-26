@@ -1528,19 +1528,22 @@ document.addEventListener('DOMContentLoaded', () => {
     drawPattern(canvas, pattern);
     canvas.dataset.pattern = pattern;
 
-    // Handle click on option
-    canvas.onclick = function (e) {
-      e.stopPropagation();
-      setSelectedStyle(pattern);
-      (document.getElementById('styleOptions') as HTMLElement).style.display = 'none';
+    // Handle click on option - attach to the parent pattern-option div
+    const patternOption = canvas.parentElement;
+    if (patternOption && patternOption.classList.contains('pattern-option')) {
+      patternOption.onclick = function (e) {
+        e.stopPropagation();
+        setSelectedStyle(pattern);
+        (document.getElementById('styleOptions') as HTMLElement).style.display = 'none';
 
-      // Update selected link if one is selected
-      if (selectedLink) {
-        selectedLink.dashPattern = pattern;
-        isGraphModified = true;
-        Graph.graphData(gData);
-      }
-    };
+        // Update selected link if one is selected
+        if (selectedLink) {
+          selectedLink.dashPattern = pattern;
+          isGraphModified = true;
+          Graph.graphData(gData);
+        }
+      };
+    }
   }
 
   /**
