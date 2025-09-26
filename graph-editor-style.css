@@ -463,22 +463,34 @@ input[type="range"]:focus::-moz-range-thumb {
 
 .selected-style-btn {
   width: 100%;
-  padding: 0;
+  padding: 4px;
   border: 1px solid #ccc;
   background: white;
   cursor: pointer;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   border-radius: 4px;
+  gap: 2px;
 }
 
 .selected-style-btn:hover {
-  border-color: #999;
+  border-color: #666; /* gray border instead of background */
+  background: white; /* keep white background */
 }
 
 .selected-style-btn:focus {
   outline: none;
   border-color: #666;
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.selected-style-label {
+  font-size: 0.75em;
+  color: #666;
+  text-align: center;
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 /* Save Graph Modal Styles */

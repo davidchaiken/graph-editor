@@ -1505,6 +1505,15 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.stroke();
   }
 
+  // Pattern to label mapping
+  const patternLabels: Record<DashPattern, string> = {
+    'solid': 'Strong Attract',
+    'dash-dot': 'Weak Attract',
+    'long-dashed': 'Neutral',
+    'dashed': 'Weak Repel',
+    'dotted': 'Strong Repel'
+  };
+
   /**
    * Updates the selected style canvas with a new pattern.
    * @param {DashPattern} pattern - The pattern to set.
@@ -1512,10 +1521,17 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   function setSelectedStyle(pattern: DashPattern): void {
     const selectedStyle = document.getElementById('selectedStyle') as HTMLCanvasElement;
+    const selectedStyleLabel = document.getElementById('selectedStyleLabel') as HTMLSpanElement;
+    
     if (!selectedStyle) return;
 
     drawPattern(selectedStyle, pattern);
     selectedStyle.dataset.pattern = pattern;
+    
+    // Update the label text
+    if (selectedStyleLabel) {
+      selectedStyleLabel.textContent = patternLabels[pattern];
+    }
   }
 
   /**
