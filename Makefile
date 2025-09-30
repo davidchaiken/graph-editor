@@ -28,8 +28,16 @@ format-check:
 build:
 	npm run build
 
-# First clean; then check, format, and lint; then build
-status: clean check format-check lint build
+# Run tests with Jest
+test:
+	npm test
+
+# Run tests in watch mode
+test-watch:
+	npm run test:watch
+
+# First clean; then check, format, lint, test, and build
+status: clean check format-check lint test build
 
 # Can also use http-server with nodejs, but this is even easier...
 server:

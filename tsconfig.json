@@ -113,6 +113,8 @@
     "noUncheckedIndexedAccess": true,
   },
   "include": [
-    "graph-editor-script.ts"
+    "graph-editor-script.ts",
+    "src/**/*.ts",
+    "tests/**/*.ts"
   ]
 }
