@@ -65,6 +65,9 @@ interface Link extends Required<LinkObject> {
 interface GraphData {
   nodes: Node[];
   links: Link[];
+  totalNodes: number;
+  totalLinks: number;
+  totalLinkThickness: number;
   metadata?: {
     name?: string;
     description?: string;
@@ -139,6 +142,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const gData: GraphData = {
     nodes: [],
     links: [],
+    totalNodes: 0,
+    totalLinks: 0,
+    totalLinkThickness: 0,
   };
 
   // Initialize graph
@@ -313,23 +319,23 @@ document.addEventListener('DOMContentLoaded', () => {
           // the strength calculation below to try to provide control to the user while
           // still maintaining a good layout.
           const l = link as Link;
-          const baseDistance = 100 + (l.source.nlinks + l.target.nlinks) * 10;
+          const baseDistance = (getAverageLinkThickness() * 90); // + (l.source.nlinks + l.target.nlinks) * 5;
           const delta = (baseDistance * l.thickness) / 10;
           let distance: number;
 
           // distance is determined by the color of the nodes and the link
           switch (l.dashPattern) {
             case 'dotted': // strong repulsion
-              distance = 2.5 * baseDistance + delta;
+              distance = 1.5 * baseDistance + delta;
               break;
             case 'dashed': // repulsion
-              distance = 1.75 * baseDistance + delta;
+              distance = 1.375 * baseDistance + delta;
               break;
             case 'long-dashed': // neutral
-              distance = 1.5 * baseDistance;
+              distance = 1.25 * baseDistance;
               break;
             case 'dash-dot': // attraction
-              distance = 1.25 * baseDistance - delta;
+              distance = 1.125 * baseDistance - delta;
               break;
             default: // solid, strong attraction
               distance = baseDistance - delta;
@@ -338,6 +344,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
           if (l.source.color === l.target.color) {
             if (l.source.color == l.color) {
+              if (l.source.label === 'Chores' || l.target.label === 'Chores') {
+                console.log(`distance for link between ${l.source.label} and ${l.target.label} is ${distance * 0.5}`);
+              }
               return distance * 0.5; // node + link color makes nodes a lot more attractive
             } else {
               return distance * 0.75; // node color makes nodes more attractive
@@ -355,19 +364,27 @@ document.addEventListener('DOMContentLoaded', () => {
           // based on the average of the source and target node links helps provide
           // space in dense parts of the graph.
           const l = link as Link;
-          const divisor = (l.source.nlinks + l.target.nlinks) / 2;
+          const divisor = (l.source.nlinks + l.target.nlinks);
+          let raw = 1;
+          /*
           switch (l.dashPattern) {
             case 'dotted':
-              return l.thickness / divisor; // strong repulsion force
+              raw = l.thickness; // strong repulsion force
             case 'dashed':
-              return (l.thickness * 0.75) / divisor; // repulsion force
+              raw = (l.thickness * 0.825); // repulsion force
             case 'long-dashed':
-              return (l.thickness * 0.5) / divisor; // neutral force
+              raw = (l.thickness * 0.75); // neutral force
             case 'dash-dot':
-              return (l.thickness * 0.75) / divisor; // attraction force
+              raw = (l.thickness * 0.825); // attraction force
             default:
-              return l.thickness / divisor; // strong attraction force
+              raw = l.thickness; // strong attraction force
           }
+              */
+          const retval = Math.min(1, raw / divisor); // TODO: no longer required, but test that divisor is not 0
+          if (l.source.label === 'Chores' || l.target.label === 'Chores') {
+            console.log(`strength for link between ${l.source.label} and ${l.target.label} is ${retval}`);
+          }
+          return retval;
         })
     )
     .d3Force('center', null) // center force is not intuitive when editing
@@ -481,6 +498,7 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       gData.nodes.push(newNode);
+      gData.totalNodes++;
       Graph.graphData(gData);
       Graph.d3ReheatSimulation();
 
@@ -539,7 +557,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Add event listener for link thickness changes
   document.getElementById('linkThickness')!.addEventListener('input', (e: Event) => {
     if (selectedLink) {
-      selectedLink.thickness = parseInt((e.target as HTMLInputElement).value) || DEFAULT_THICKNESS;
+      const oldThickness = selectedLink.thickness;
+      const newThickness = parseInt((e.target as HTMLInputElement).value) || DEFAULT_THICKNESS;
+      selectedLink.thickness = newThickness;
+      gData.totalLinkThickness += (newThickness - oldThickness);
       isGraphModified = true;
       Graph.graphData(gData);
     }
@@ -577,6 +598,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Functions
+  function getAverageLinksPerNode(): number {
+    if (gData.totalNodes === 0) return 0;
+    return gData.totalLinks / gData.totalNodes;
+  }
+
+  function getAverageLinkThickness(): number {
+    if (gData.totalLinks === 0) return 0;
+    return gData.totalLinkThickness / gData.totalLinks;
+  }
+
   function getUniqueLabel(proposedLabel: string) {
     // Check if the label already exists
     const existingLabels = new Set(gData.nodes.map(node => node.label));
@@ -648,6 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     gData.nodes.push(newNode);
+    gData.totalNodes++;
     Graph.graphData(gData);
     Graph.d3ReheatSimulation();
 
@@ -664,6 +696,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Store the node ID before deletion
     const nodeIdToDelete = selectedNode.id;
 
+    // Count links to be removed and calculate total thickness to subtract
+    const linksToRemove = gData.links.filter(link => link.source.id === nodeIdToDelete || link.target.id === nodeIdToDelete);
+    const thicknessToRemove = linksToRemove.reduce((sum, link) => sum + link.thickness, 0);
+    
     // Remove all links connected to the node and update nlinks for connected nodes
     gData.links.forEach(link => {
       if (link.source.id === nodeIdToDelete) {
@@ -675,8 +711,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     gData.links = gData.links.filter(link => link.source.id !== nodeIdToDelete && link.target.id !== nodeIdToDelete);
 
+    // Update totalLinks count and totalLinkThickness
+    gData.totalLinks -= linksToRemove.length;
+    gData.totalLinkThickness -= thicknessToRemove;
+
     // Remove the node
     gData.nodes = gData.nodes.filter(node => node.id !== nodeIdToDelete);
+    gData.totalNodes--;
 
     // Disable Clear button if no nodes remain
     if (gData.nodes.length === 0) {
@@ -715,6 +756,8 @@ document.addEventListener('DOMContentLoaded', () => {
     sourceNode.nlinks--;
     targetNode.nlinks--;
     gData.links = gData.links.filter(link => link !== selectedLink);
+    gData.totalLinks--;
+    gData.totalLinkThickness -= selectedLink.thickness;
 
     // Mark graph as modified
     isGraphModified = true;
@@ -795,6 +838,8 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedNode.nlinks++;
         node.nlinks++;
         gData.links.push(newLink);
+        gData.totalLinks++;
+        gData.totalLinkThickness += newLink.thickness;
         Graph.graphData(gData);
 
         // Mark graph as modified
@@ -939,7 +984,10 @@ document.addEventListener('DOMContentLoaded', () => {
       deleteBtn.style.opacity = '1';
       thicknessInput.addEventListener('input', () => {
         if (selectedLink) {
-          selectedLink.thickness = parseInt(thicknessInput.value) || DEFAULT_THICKNESS;
+          const oldThickness = selectedLink.thickness;
+          const newThickness = parseInt(thicknessInput.value) || DEFAULT_THICKNESS;
+          selectedLink.thickness = newThickness;
+          gData.totalLinkThickness += (newThickness - oldThickness);
           isGraphModified = true;
           Graph.graphData(gData);
         }
@@ -1082,6 +1130,10 @@ document.addEventListener('DOMContentLoaded', () => {
         version: GRAPH_EDITOR_VERSION,
         timestamp: new Date().toISOString().split('.')[0] + 'Z', // Keep UTC for metadata
         name: graphName,
+        totalNodes: gData.totalNodes,
+        totalLinks: gData.totalLinks,
+        averageLinksPerNode: getAverageLinksPerNode(),
+        averageLinkThickness: getAverageLinkThickness(),
       },
       nodes: gData.nodes.map(node => {
         const nodeData: Node = {
@@ -1287,15 +1339,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Clear current graph
     gData.nodes = [];
     gData.links = [];
+    gData.totalNodes = 0;
+    gData.totalLinks = 0;
+    gData.totalLinkThickness = 0;
 
     // Load nodes
     graphData.nodes.forEach((nodeData: Node) => {
       if (
-        nodeData.id &&
         typeof nodeData.id === 'number' &&
-        nodeData.x &&
         typeof nodeData.x === 'number' &&
-        nodeData.y &&
         typeof nodeData.y === 'number' &&
         (!nodeData.label || typeof nodeData.label === 'string') &&
         (!nodeData.color || typeof nodeData.color === 'string') &&
@@ -1355,6 +1407,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set nextNodeId to max ID + 1
     nextNodeId = maxNodeId + 1;
+
+    // Update counters
+    gData.totalNodes = gData.nodes.length;
+    gData.totalLinks = gData.links.length;
+    gData.totalLinkThickness = gData.links.reduce((sum, link) => sum + link.thickness, 0);
 
     // Update the graph
     selectedNode = null;
@@ -1424,6 +1481,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Clear graph data
     gData.nodes = [];
     gData.links = [];
+    gData.totalNodes = 0;
+    gData.totalLinks = 0;
+    gData.totalLinkThickness = 0;
 
     // Reset state variables
     selectedNode = null;
@@ -1520,11 +1580,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Pattern to label mapping
   const patternLabels: Record<DashPattern, string> = {
-    solid: 'Strong Attract',
+    solid: 'Attract',
     'dash-dot': 'Weak Attract',
     'long-dashed': 'Neutral',
     dashed: 'Weak Repel',
-    dotted: 'Strong Repel',
+    dotted: 'Repel',
   };
 
   /**
