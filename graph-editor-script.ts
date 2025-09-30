@@ -65,7 +65,6 @@ interface Link extends Required<LinkObject> {
 interface GraphData {
   nodes: Node[];
   links: Link[];
-  totalNodes: number;
   totalLinks: number;
   totalLinkThickness: number;
   metadata?: {
@@ -142,7 +141,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const gData: GraphData = {
     nodes: [],
     links: [],
-    totalNodes: 0,
     totalLinks: 0,
     totalLinkThickness: 0,
   };
@@ -313,17 +311,23 @@ document.addEventListener('DOMContentLoaded', () => {
       d3
         .forceLink()
         .distance((link: unknown) => {
-          // This node distance calculation is based on the number of links of the
-          // source and target nodes, the link thickness, the link pattern, the color
-          // of the link, and the color of the source and target nodes. It combines with
+          // This node distance calculation is based the link thickness, the link pattern,
+          // the color of the link, and the color of the source and target nodes. It combines with
           // the strength calculation below to try to provide control to the user while
           // still maintaining a good layout.
+          // The distances for all nodes are based on the average link thickness,
+          // so that graphs with a lot of strong links don't have a layout that is overly crowded.
+          // This distance calculation used to take the number of links of the source and target nodes,
+          // which tended to cause too much spread in the graph. Instead, the number of links is used
+          // to calculate the strength of the link.
+          // The distances in this function are intended to fit well on a laptop screen, but also
+          // look good on a larger browser window on a full-sized monitor.
           const l = link as Link;
-          const baseDistance = (getAverageLinkThickness() * 90); // + (l.source.nlinks + l.target.nlinks) * 5;
+          const baseDistance = (getAverageLinkThickness() * 90);
           const delta = (baseDistance * l.thickness) / 10;
           let distance: number;
 
-          // distance is determined by the color of the nodes and the link
+          // distance is determined by the dash pattern of the link, combined with the link thickness
           switch (l.dashPattern) {
             case 'dotted': // strong repulsion
               distance = 1.5 * baseDistance + delta;
@@ -344,9 +348,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
           if (l.source.color === l.target.color) {
             if (l.source.color == l.color) {
-              if (l.source.label === 'Chores' || l.target.label === 'Chores') {
-                console.log(`distance for link between ${l.source.label} and ${l.target.label} is ${distance * 0.5}`);
-              }
               return distance * 0.5; // node + link color makes nodes a lot more attractive
             } else {
               return distance * 0.75; // node color makes nodes more attractive
@@ -358,33 +359,14 @@ document.addEventListener('DOMContentLoaded', () => {
           // The default strength in the d3-force library is:
           //   1 / Math.min(count(link.source), count(link.target));
           // Reference: https://d3js.org/d3-force/link#link_strength
-          // The strength calculation below takes several factors into account:
-          // the link thinkness, the link pattern, and the number of links
-          // attached to both the source and target nodes. Reducing the strength
-          // based on the average of the source and target node links helps provide
-          // space in dense parts of the graph.
+          // The types of graphs created with this editor tend to look better
+          // by combining the source and target node link counts with a sum
+          // rather than using the minimum of the two.
+          // This strength calculation used to take the link thickness and pattern
+          // into account, but these parameters caused non-intuitive, non-linear
+          // behavior that seemed confusing.
           const l = link as Link;
-          const divisor = (l.source.nlinks + l.target.nlinks);
-          let raw = 1;
-          /*
-          switch (l.dashPattern) {
-            case 'dotted':
-              raw = l.thickness; // strong repulsion force
-            case 'dashed':
-              raw = (l.thickness * 0.825); // repulsion force
-            case 'long-dashed':
-              raw = (l.thickness * 0.75); // neutral force
-            case 'dash-dot':
-              raw = (l.thickness * 0.825); // attraction force
-            default:
-              raw = l.thickness; // strong attraction force
-          }
-              */
-          const retval = Math.min(1, raw / divisor); // TODO: no longer required, but test that divisor is not 0
-          if (l.source.label === 'Chores' || l.target.label === 'Chores') {
-            console.log(`strength for link between ${l.source.label} and ${l.target.label} is ${retval}`);
-          }
-          return retval;
+          return 1.0 / (l.source.nlinks + l.target.nlinks);
         })
     )
     .d3Force('center', null) // center force is not intuitive when editing
@@ -498,7 +480,6 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       gData.nodes.push(newNode);
-      gData.totalNodes++;
       Graph.graphData(gData);
       Graph.d3ReheatSimulation();
 
@@ -597,12 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Functions
-  function getAverageLinksPerNode(): number {
-    if (gData.totalNodes === 0) return 0;
-    return gData.totalLinks / gData.totalNodes;
-  }
-
+  // Functions based on graph data
   function getAverageLinkThickness(): number {
     if (gData.totalLinks === 0) return 0;
     return gData.totalLinkThickness / gData.totalLinks;
@@ -679,7 +655,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     gData.nodes.push(newNode);
-    gData.totalNodes++;
     Graph.graphData(gData);
     Graph.d3ReheatSimulation();
 
@@ -717,7 +692,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Remove the node
     gData.nodes = gData.nodes.filter(node => node.id !== nodeIdToDelete);
-    gData.totalNodes--;
 
     // Disable Clear button if no nodes remain
     if (gData.nodes.length === 0) {
@@ -1130,10 +1104,6 @@ document.addEventListener('DOMContentLoaded', () => {
         version: GRAPH_EDITOR_VERSION,
         timestamp: new Date().toISOString().split('.')[0] + 'Z', // Keep UTC for metadata
         name: graphName,
-        totalNodes: gData.totalNodes,
-        totalLinks: gData.totalLinks,
-        averageLinksPerNode: getAverageLinksPerNode(),
-        averageLinkThickness: getAverageLinkThickness(),
       },
       nodes: gData.nodes.map(node => {
         const nodeData: Node = {
@@ -1339,7 +1309,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Clear current graph
     gData.nodes = [];
     gData.links = [];
-    gData.totalNodes = 0;
     gData.totalLinks = 0;
     gData.totalLinkThickness = 0;
 
@@ -1409,7 +1378,6 @@ document.addEventListener('DOMContentLoaded', () => {
     nextNodeId = maxNodeId + 1;
 
     // Update counters
-    gData.totalNodes = gData.nodes.length;
     gData.totalLinks = gData.links.length;
     gData.totalLinkThickness = gData.links.reduce((sum, link) => sum + link.thickness, 0);
 
@@ -1481,7 +1449,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Clear graph data
     gData.nodes = [];
     gData.links = [];
-    gData.totalNodes = 0;
     gData.totalLinks = 0;
     gData.totalLinkThickness = 0;
 
