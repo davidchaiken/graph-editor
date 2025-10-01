@@ -553,7 +553,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Functions based on graph data
-
   function getUniqueLabel(proposedLabel: string) {
     // Check if the label already exists
     const existingLabels = new Set(gData.nodes.map(node => node.label));
@@ -1230,6 +1229,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set nextNodeId to max ID + 1
     nextNodeId = (result.maxNodeId ?? 0) + 1;
+
+    // Update counters
+    gData.totalLinks = gData.links.length;
+    gData.totalLinkThickness = gData.links.reduce((sum, link) => sum + link.thickness, 0);
 
     // Update the graph
     selectedNode = null;
