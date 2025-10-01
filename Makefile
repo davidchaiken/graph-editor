@@ -37,7 +37,7 @@ test-watch:
 	npm run test:watch
 
 # First clean; then check, format, lint, test, and build
-status: clean check format-check lint test build
+status: clean check format-check lint-check test build
 
 # Can also use http-server with nodejs, but this is even easier...
 server:
