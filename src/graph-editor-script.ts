@@ -35,7 +35,7 @@ import {
   DEFAULT_COLOR,
   DEFAULT_THICKNESS,
   DEFAULT_SIZE,
-} from './src/graph-core.js';
+} from './graph-core.js';
 
 const APPLICATION_NAME = 'graph-editor';
 const GRAPH_EDITOR_VERSION = '0.3';
