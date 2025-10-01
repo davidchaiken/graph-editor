@@ -58,13 +58,29 @@
           <div class="line-pattern-dropdown">
             <button type="button" id="selectedStyleBtn" class="selected-style-btn">
               <canvas id="selectedStyle" class="selected-style"></canvas>
+              <span id="selectedStyleLabel" class="selected-style-label">Attract</span>
             </button>
             <div class="style-options" id="styleOptions" style="display: none;">
-              <canvas data-pattern="solid"></canvas>
-              <canvas data-pattern="dash-dot"></canvas>
-              <canvas data-pattern="long-dashed"></canvas>
-              <canvas data-pattern="dashed"></canvas>
-              <canvas data-pattern="dotted"></canvas>
+              <div class="pattern-option">
+                <canvas data-pattern="solid"></canvas>
+                <span class="pattern-label">Attract</span>
+              </div>
+              <div class="pattern-option">
+                <canvas data-pattern="dash-dot"></canvas>
+                <span class="pattern-label">Weak Attract</span>
+              </div>
+              <div class="pattern-option">
+                <canvas data-pattern="long-dashed"></canvas>
+                <span class="pattern-label">Neutral</span>
+              </div>
+              <div class="pattern-option">
+                <canvas data-pattern="dashed"></canvas>
+                <span class="pattern-label">Weak Repel</span>
+              </div>
+              <div class="pattern-option">
+                <canvas data-pattern="dotted"></canvas>
+                <span class="pattern-label">Repel</span>
+              </div>
             </div>
           </div>
         </div>

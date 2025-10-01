@@ -44,6 +44,7 @@ interface Node extends NodeObject {
   size: number;
   x: number;
   y: number;
+  nlinks: number;
   fx?: number;
   fy?: number;
   exed?: boolean;
@@ -64,6 +65,8 @@ interface Link extends Required<LinkObject> {
 interface GraphData {
   nodes: Node[];
   links: Link[];
+  totalLinks: number;
+  totalLinkThickness: number;
   metadata?: {
     name?: string;
     description?: string;
@@ -138,6 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const gData: GraphData = {
     nodes: [],
     links: [],
+    totalLinks: 0,
+    totalLinkThickness: 0,
   };
 
   // Initialize graph
@@ -306,24 +311,35 @@ document.addEventListener('DOMContentLoaded', () => {
       d3
         .forceLink()
         .distance((link: unknown) => {
+          // This node distance calculation is based the link thickness, the link pattern,
+          // the color of the link, and the color of the source and target nodes. It combines with
+          // the strength calculation below to try to provide control to the user while
+          // still maintaining a good layout.
+          // The distances for all nodes are based on the average link thickness,
+          // so that graphs with a lot of strong links don't have a layout that is overly crowded.
+          // This distance calculation used to take the number of links of the source and target nodes,
+          // which tended to cause too much spread in the graph. Instead, the number of links is used
+          // to calculate the strength of the link.
+          // The distances in this function are intended to fit well on a laptop screen, but also
+          // look good on a larger browser window on a full-sized monitor.
           const l = link as Link;
-          const baseDistance = 100;
-          const delta = (baseDistance / 10) * l.thickness;
-          let distance = baseDistance;
+          const baseDistance = (getAverageLinkThickness() * 90);
+          const delta = (baseDistance * l.thickness) / 10;
+          let distance: number;
 
-          // distance is determined by the color of the nodes and the link
+          // distance is determined by the dash pattern of the link, combined with the link thickness
           switch (l.dashPattern) {
             case 'dotted': // strong repulsion
-              distance = 5 * baseDistance + delta;
+              distance = 1.5 * baseDistance + delta;
               break;
             case 'dashed': // repulsion
-              distance = 4 * baseDistance + delta;
+              distance = 1.375 * baseDistance + delta;
               break;
             case 'long-dashed': // neutral
-              distance = 3 * baseDistance;
+              distance = 1.25 * baseDistance;
               break;
             case 'dash-dot': // attraction
-              distance = 2 * baseDistance - delta;
+              distance = 1.125 * baseDistance - delta;
               break;
             default: // solid, strong attraction
               distance = baseDistance - delta;
@@ -340,19 +356,17 @@ document.addEventListener('DOMContentLoaded', () => {
           return distance;
         })
         .strength((link: unknown) => {
+          // The default strength in the d3-force library is:
+          //   1 / Math.min(count(link.source), count(link.target));
+          // Reference: https://d3js.org/d3-force/link#link_strength
+          // The types of graphs created with this editor tend to look better
+          // by combining the source and target node link counts with a sum
+          // rather than using the minimum of the two.
+          // This strength calculation used to take the link thickness and pattern
+          // into account, but these parameters caused non-intuitive, non-linear
+          // behavior that seemed confusing.
           const l = link as Link;
-          switch (l.dashPattern) {
-            case 'dotted':
-              return l.thickness * 0.1; // strong repulsion force
-            case 'dashed':
-              return l.thickness * 0.075; // repulsion force
-            case 'long-dashed':
-              return l.thickness * 0.05; // neutral force
-            case 'dash-dot':
-              return l.thickness * 0.075; // attraction force
-            default:
-              return l.thickness * 0.1; // strong attraction force
-          }
+          return 1.0 / (l.source.nlinks + l.target.nlinks);
         })
     )
     .d3Force('center', null) // center force is not intuitive when editing
@@ -462,6 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
         y: lastMouseY,
         fx: lastMouseX, // Fix the node in place
         fy: lastMouseY, // Fix the node in place
+        nlinks: 0,
       };
 
       gData.nodes.push(newNode);
@@ -523,7 +538,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Add event listener for link thickness changes
   document.getElementById('linkThickness')!.addEventListener('input', (e: Event) => {
     if (selectedLink) {
-      selectedLink.thickness = parseInt((e.target as HTMLInputElement).value) || DEFAULT_THICKNESS;
+      const oldThickness = selectedLink.thickness;
+      const newThickness = parseInt((e.target as HTMLInputElement).value) || DEFAULT_THICKNESS;
+      selectedLink.thickness = newThickness;
+      gData.totalLinkThickness += (newThickness - oldThickness);
       isGraphModified = true;
       Graph.graphData(gData);
     }
@@ -560,7 +578,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Functions
+  // Functions based on graph data
+  function getAverageLinkThickness(): number {
+    if (gData.totalLinks === 0) return 0;
+    return gData.totalLinkThickness / gData.totalLinks;
+  }
+
   function getUniqueLabel(proposedLabel: string) {
     // Check if the label already exists
     const existingLabels = new Set(gData.nodes.map(node => node.label));
@@ -628,6 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
       y,
       fx: x, // Fix the node in place
       fy: y, // Fix the node in place
+      nlinks: 0,
     };
 
     gData.nodes.push(newNode);
@@ -647,8 +671,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Store the node ID before deletion
     const nodeIdToDelete = selectedNode.id;
 
-    // Remove all links connected to the node
+    // Count links to be removed and calculate total thickness to subtract
+    const linksToRemove = gData.links.filter(link => link.source.id === nodeIdToDelete || link.target.id === nodeIdToDelete);
+    const thicknessToRemove = linksToRemove.reduce((sum, link) => sum + link.thickness, 0);
+    
+    // Remove all links connected to the node and update nlinks for connected nodes
+    gData.links.forEach(link => {
+      if (link.source.id === nodeIdToDelete) {
+        link.target.nlinks--;
+      }
+      if (link.target.id === nodeIdToDelete) {
+        link.source.nlinks--;
+      }
+    });
     gData.links = gData.links.filter(link => link.source.id !== nodeIdToDelete && link.target.id !== nodeIdToDelete);
+
+    // Update totalLinks count and totalLinkThickness
+    gData.totalLinks -= linksToRemove.length;
+    gData.totalLinkThickness -= thicknessToRemove;
 
     // Remove the node
     gData.nodes = gData.nodes.filter(node => node.id !== nodeIdToDelete);
@@ -686,8 +726,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const sourceNode = selectedLink.source;
     const targetNode = selectedLink.target;
 
-    // Remove the link from the array
+    // Remove the link from the array and update nlinks for source and target nodes
+    sourceNode.nlinks--;
+    targetNode.nlinks--;
     gData.links = gData.links.filter(link => link !== selectedLink);
+    gData.totalLinks--;
+    gData.totalLinkThickness -= selectedLink.thickness;
 
     // Mark graph as modified
     isGraphModified = true;
@@ -765,7 +809,11 @@ document.addEventListener('DOMContentLoaded', () => {
           label: (document.getElementById('linkLabel') as HTMLInputElement).value || undefined,
           dashPattern: getCurrentPattern(),
         };
+        selectedNode.nlinks++;
+        node.nlinks++;
         gData.links.push(newLink);
+        gData.totalLinks++;
+        gData.totalLinkThickness += newLink.thickness;
         Graph.graphData(gData);
 
         // Mark graph as modified
@@ -910,7 +958,10 @@ document.addEventListener('DOMContentLoaded', () => {
       deleteBtn.style.opacity = '1';
       thicknessInput.addEventListener('input', () => {
         if (selectedLink) {
-          selectedLink.thickness = parseInt(thicknessInput.value) || DEFAULT_THICKNESS;
+          const oldThickness = selectedLink.thickness;
+          const newThickness = parseInt(thicknessInput.value) || DEFAULT_THICKNESS;
+          selectedLink.thickness = newThickness;
+          gData.totalLinkThickness += (newThickness - oldThickness);
           isGraphModified = true;
           Graph.graphData(gData);
         }
@@ -1062,6 +1113,7 @@ document.addEventListener('DOMContentLoaded', () => {
           size: node.size,
           x: node.x,
           y: node.y,
+          nlinks: node.nlinks,
         };
         // Only include exed if it's true
         if (node.exed) {
@@ -1257,15 +1309,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Clear current graph
     gData.nodes = [];
     gData.links = [];
+    gData.totalLinks = 0;
+    gData.totalLinkThickness = 0;
 
     // Load nodes
     graphData.nodes.forEach((nodeData: Node) => {
       if (
-        nodeData.id &&
         typeof nodeData.id === 'number' &&
-        nodeData.x &&
         typeof nodeData.x === 'number' &&
-        nodeData.y &&
         typeof nodeData.y === 'number' &&
         (!nodeData.label || typeof nodeData.label === 'string') &&
         (!nodeData.color || typeof nodeData.color === 'string') &&
@@ -1281,6 +1332,7 @@ document.addEventListener('DOMContentLoaded', () => {
           fx: nodeData.x, // Fix the node in its loaded position
           fy: nodeData.y, // Fix the node in its loaded position
           exed: !!nodeData.exed,
+          nlinks: 0, // nlinks value is recalculated below
         });
       } else {
         console.warn(`Loaded node (${nodeData.id}) failed type check.`);
@@ -1307,6 +1359,8 @@ document.addEventListener('DOMContentLoaded', () => {
         (!linkData.label || typeof linkData.label === 'string') &&
         (!linkData.dashPattern || isDashPattern(linkData.dashPattern))
       ) {
+        sourceNode.nlinks++;
+        targetNode.nlinks++;
         gData.links.push({
           source: sourceNode,
           target: targetNode,
@@ -1322,6 +1376,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set nextNodeId to max ID + 1
     nextNodeId = maxNodeId + 1;
+
+    // Update counters
+    gData.totalLinks = gData.links.length;
+    gData.totalLinkThickness = gData.links.reduce((sum, link) => sum + link.thickness, 0);
 
     // Update the graph
     selectedNode = null;
@@ -1391,6 +1449,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Clear graph data
     gData.nodes = [];
     gData.links = [];
+    gData.totalLinks = 0;
+    gData.totalLinkThickness = 0;
 
     // Reset state variables
     selectedNode = null;
@@ -1485,6 +1545,15 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.stroke();
   }
 
+  // Pattern to label mapping
+  const patternLabels: Record<DashPattern, string> = {
+    solid: 'Attract',
+    'dash-dot': 'Weak Attract',
+    'long-dashed': 'Neutral',
+    dashed: 'Weak Repel',
+    dotted: 'Repel',
+  };
+
   /**
    * Updates the selected style canvas with a new pattern.
    * @param {DashPattern} pattern - The pattern to set.
@@ -1492,10 +1561,17 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   function setSelectedStyle(pattern: DashPattern): void {
     const selectedStyle = document.getElementById('selectedStyle') as HTMLCanvasElement;
+    const selectedStyleLabel = document.getElementById('selectedStyleLabel') as HTMLSpanElement;
+
     if (!selectedStyle) return;
 
     drawPattern(selectedStyle, pattern);
     selectedStyle.dataset.pattern = pattern;
+
+    // Update the label text
+    if (selectedStyleLabel) {
+      selectedStyleLabel.textContent = patternLabels[pattern];
+    }
   }
 
   /**
@@ -1508,19 +1584,22 @@ document.addEventListener('DOMContentLoaded', () => {
     drawPattern(canvas, pattern);
     canvas.dataset.pattern = pattern;
 
-    // Handle click on option
-    canvas.onclick = function (e) {
-      e.stopPropagation();
-      setSelectedStyle(pattern);
-      (document.getElementById('styleOptions') as HTMLElement).style.display = 'none';
+    // Handle click on option - attach to the parent pattern-option div
+    const patternOption = canvas.parentElement;
+    if (patternOption && patternOption.classList.contains('pattern-option')) {
+      patternOption.onclick = function (e) {
+        e.stopPropagation();
+        setSelectedStyle(pattern);
+        (document.getElementById('styleOptions') as HTMLElement).style.display = 'none';
 
-      // Update selected link if one is selected
-      if (selectedLink) {
-        selectedLink.dashPattern = pattern;
-        isGraphModified = true;
-        Graph.graphData(gData);
-      }
-    };
+        // Update selected link if one is selected
+        if (selectedLink) {
+          selectedLink.dashPattern = pattern;
+          isGraphModified = true;
+          Graph.graphData(gData);
+        }
+      };
+    }
   }
 
   /**
