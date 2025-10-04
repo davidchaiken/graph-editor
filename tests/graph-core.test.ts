@@ -20,6 +20,7 @@
 
 import {
   createEmptyGraphData,
+  clearGraphData,
   createNode,
   createLink,
   addLink,
@@ -74,6 +75,34 @@ describe('Graph Calculations', () => {
       expect(link.target).toBe(node2);
       expect(link.thickness).toBe(DEFAULT_THICKNESS);
       expect(link.color).toBe(DEFAULT_COLOR);
+    });
+  });
+
+  describe('clearGraphData', () => {
+    test('should clear all data from existing graph', () => {
+      // Setup: Add some data to the graph
+      const node1 = createNode(1, 'Node 1', 10, 20);
+      const node2 = createNode(2, 'Node 2', 30, 40);
+      const link = createLink(node1, node2, 5);
+
+      // Add nodes to the graph
+      graphData.nodes.push(node1, node2);
+      addLink(graphData, link);
+
+      // Verify data exists
+      expect(graphData.nodes.length).toBe(2);
+      expect(graphData.links.length).toBe(1);
+      expect(graphData.totalLinks).toBe(1);
+      expect(graphData.totalLinkThickness).toBe(5);
+
+      // Clear the data
+      clearGraphData(graphData);
+
+      // Verify data is cleared
+      expect(graphData.nodes).toEqual([]);
+      expect(graphData.links).toEqual([]);
+      expect(graphData.totalLinks).toBe(0);
+      expect(graphData.totalLinkThickness).toBe(0);
     });
   });
 

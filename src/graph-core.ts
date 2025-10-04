@@ -174,13 +174,23 @@ export function removeNode(graphData: GraphData, nodeId: number): void {
 
   // Update nlinks for all remaining nodes that were connected to the removed links
   linksToRemove.forEach(link => {
-    if (link.source.id !== nodeId && link.source.nlinks > 0) {
+    if (link.source.id !== nodeId) {
       link.source.nlinks--;
     }
-    if (link.target.id !== nodeId && link.target.nlinks > 0) {
+    if (link.target.id !== nodeId) {
       link.target.nlinks--;
     }
   });
+}
+
+/**
+ * Clears all data from a graph, resetting it to empty state
+ */
+export function clearGraphData(graphData: GraphData): void {
+  graphData.nodes = [];
+  graphData.links = [];
+  graphData.totalLinks = 0;
+  graphData.totalLinkThickness = 0;
 }
 
 /**

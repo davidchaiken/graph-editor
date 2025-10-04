@@ -26,6 +26,7 @@ import {
   removeLink,
   updateLinkThickness,
   removeNode,
+  clearGraphData,
   getAverageLinkThickness,
   loadGraphData,
   type GraphData,
@@ -1300,11 +1301,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function clearGraph(): void {
     // Clear graph data
-    const emptyData = createEmptyGraphData();
-    gData.nodes = emptyData.nodes;
-    gData.links = emptyData.links;
-    gData.totalLinks = emptyData.totalLinks;
-    gData.totalLinkThickness = emptyData.totalLinkThickness;
+    clearGraphData(gData);
 
     // Reset state variables
     selectedNode = null;
