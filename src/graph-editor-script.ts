@@ -18,62 +18,54 @@ import * as d3 from 'd3';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import ForceGraph, { LinkObject, NodeObject } from 'force-graph';
+import {
+  createEmptyGraphData,
+  createNode,
+  createLink,
+  addLink,
+  removeLink,
+  updateLinkThickness,
+  removeNode,
+  clearGraphData,
+  getAverageLinkThickness,
+  loadGraphData,
+  type GraphData,
+  type Node,
+  type Link,
+  type DashPattern,
+  DEFAULT_COLOR,
+  DEFAULT_THICKNESS,
+  DEFAULT_SIZE,
+} from './graph-core.js';
 
 const APPLICATION_NAME = 'graph-editor';
 const GRAPH_EDITOR_VERSION = '0.3';
 
-const DEFAULT_COLOR = '#1f77b4';
-const DEFAULT_THICKNESS = 1;
-const DEFAULT_SIZE = 5;
-
-const DASH_PATTERN_OPTIONS = ['solid', 'dotted', 'dashed', 'long-dashed', 'dash-dot'] as const;
 const DEFAULT_PATTERN = 'solid';
-type DashPattern = (typeof DASH_PATTERN_OPTIONS)[number];
 
-function isDashPattern(dashPattern: string): dashPattern is DashPattern {
-  return DASH_PATTERN_OPTIONS.includes(dashPattern as DashPattern);
-}
-
-// Node is stored in the ForceGraph NodeObject.
-// It is not really a proper extension, because it restricts some of the
-// properties and makes some of them required to reduce runtime type checks.
-interface Node extends NodeObject {
-  id: number;
-  label: string;
-  color: string;
-  size: number;
-  x: number;
-  y: number;
-  nlinks: number;
-  fx?: number;
-  fy?: number;
-  exed?: boolean;
-}
-
-// Link is stored in the ForceGraph LinkObject.
-// It makes the source and target properties required and restricts
-// these two properties to the Node type to reduce runtime type checks.
-interface Link extends Required<LinkObject> {
-  source: Node;
-  target: Node;
-  thickness: number;
-  color: string;
-  label?: string;
-  dashPattern?: DashPattern;
-}
-
-interface GraphData {
-  nodes: Node[];
-  links: Link[];
-  totalLinks: number;
-  totalLinkThickness: number;
+// Interface for JSON file format
+interface JsonGraphData {
   metadata?: {
     name?: string;
-    description?: string;
-    createdBy?: string;
-    createdAt?: string;
-    modifiedAt?: string;
+    [key: string]: unknown;
   };
+  nodes: Array<{
+    id: number;
+    label?: string;
+    color?: string;
+    size?: number;
+    x: number;
+    y: number;
+    exed?: boolean;
+  }>;
+  links: Array<{
+    source: number;
+    target: number;
+    thickness?: number;
+    color?: string;
+    label?: string;
+    dashPattern?: DashPattern;
+  }>;
 }
 
 // Wait for DOM to be fully loaded
@@ -138,12 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Graph data
-  const gData: GraphData = {
-    nodes: [],
-    links: [],
-    totalLinks: 0,
-    totalLinkThickness: 0,
-  };
+  const gData: GraphData = createEmptyGraphData();
 
   // Initialize graph
   const Graph = new ForceGraph(document.getElementById('graph')!)
@@ -323,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // The distances in this function are intended to fit well on a laptop screen, but also
           // look good on a larger browser window on a full-sized monitor.
           const l = link as Link;
-          const baseDistance = (getAverageLinkThickness() * 90);
+          const baseDistance = getAverageLinkThickness(gData) * 90;
           const delta = (baseDistance * l.thickness) / 10;
           let distance: number;
 
@@ -466,18 +453,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const exed = (document.getElementById('nodeExed') as HTMLInputElement).checked;
       const uniqueLabel = getUniqueLabel(proposedLabel);
 
-      const newNode = {
-        id: nextNodeId++,
-        label: uniqueLabel,
-        color,
-        size,
-        exed,
-        x: lastMouseX,
-        y: lastMouseY,
-        fx: lastMouseX, // Fix the node in place
-        fy: lastMouseY, // Fix the node in place
-        nlinks: 0,
-      };
+      const newNode = createNode(nextNodeId++, uniqueLabel, lastMouseX, lastMouseY, color, size);
+      if (exed) newNode.exed = true;
 
       gData.nodes.push(newNode);
       Graph.graphData(gData);
@@ -538,10 +515,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Add event listener for link thickness changes
   document.getElementById('linkThickness')!.addEventListener('input', (e: Event) => {
     if (selectedLink) {
-      const oldThickness = selectedLink.thickness;
       const newThickness = parseInt((e.target as HTMLInputElement).value) || DEFAULT_THICKNESS;
-      selectedLink.thickness = newThickness;
-      gData.totalLinkThickness += (newThickness - oldThickness);
+      updateLinkThickness(gData, selectedLink, newThickness);
       isGraphModified = true;
       Graph.graphData(gData);
     }
@@ -579,11 +554,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Functions based on graph data
-  function getAverageLinkThickness(): number {
-    if (gData.totalLinks === 0) return 0;
-    return gData.totalLinkThickness / gData.totalLinks;
-  }
-
   function getUniqueLabel(proposedLabel: string) {
     // Check if the label already exists
     const existingLabels = new Set(gData.nodes.map(node => node.label));
@@ -641,18 +611,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    const newNode = {
-      id: nextNodeId++,
-      label: uniqueLabel,
-      color,
-      size,
-      exed,
-      x,
-      y,
-      fx: x, // Fix the node in place
-      fy: y, // Fix the node in place
-      nlinks: 0,
-    };
+    const newNode = createNode(nextNodeId++, uniqueLabel, x, y, color, size);
+    if (exed) newNode.exed = true;
 
     gData.nodes.push(newNode);
     Graph.graphData(gData);
@@ -671,27 +631,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Store the node ID before deletion
     const nodeIdToDelete = selectedNode.id;
 
-    // Count links to be removed and calculate total thickness to subtract
-    const linksToRemove = gData.links.filter(link => link.source.id === nodeIdToDelete || link.target.id === nodeIdToDelete);
-    const thicknessToRemove = linksToRemove.reduce((sum, link) => sum + link.thickness, 0);
-    
-    // Remove all links connected to the node and update nlinks for connected nodes
-    gData.links.forEach(link => {
-      if (link.source.id === nodeIdToDelete) {
-        link.target.nlinks--;
-      }
-      if (link.target.id === nodeIdToDelete) {
-        link.source.nlinks--;
-      }
-    });
-    gData.links = gData.links.filter(link => link.source.id !== nodeIdToDelete && link.target.id !== nodeIdToDelete);
-
-    // Update totalLinks count and totalLinkThickness
-    gData.totalLinks -= linksToRemove.length;
-    gData.totalLinkThickness -= thicknessToRemove;
-
-    // Remove the node
-    gData.nodes = gData.nodes.filter(node => node.id !== nodeIdToDelete);
+    // Use the imported function to remove the node and all its links
+    removeNode(gData, nodeIdToDelete);
 
     // Disable Clear button if no nodes remain
     if (gData.nodes.length === 0) {
@@ -726,12 +667,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const sourceNode = selectedLink.source;
     const targetNode = selectedLink.target;
 
-    // Remove the link from the array and update nlinks for source and target nodes
-    sourceNode.nlinks--;
-    targetNode.nlinks--;
-    gData.links = gData.links.filter(link => link !== selectedLink);
-    gData.totalLinks--;
-    gData.totalLinkThickness -= selectedLink.thickness;
+    // Use the imported function to remove the link
+    removeLink(gData, selectedLink);
 
     // Mark graph as modified
     isGraphModified = true;
@@ -800,20 +737,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (!existingLink) {
         // Create new link with current properties from the Link tool
-        const newLink = {
-          source: selectedNode,
-          target: node,
-          thickness:
-            parseInt((document.getElementById('linkThickness') as HTMLInputElement).value) || DEFAULT_THICKNESS,
-          color: (document.getElementById('colorPicker') as HTMLInputElement).value,
-          label: (document.getElementById('linkLabel') as HTMLInputElement).value || undefined,
-          dashPattern: getCurrentPattern(),
-        };
-        selectedNode.nlinks++;
-        node.nlinks++;
-        gData.links.push(newLink);
-        gData.totalLinks++;
-        gData.totalLinkThickness += newLink.thickness;
+        const newLink = createLink(
+          selectedNode,
+          node,
+          parseInt((document.getElementById('linkThickness') as HTMLInputElement).value) || DEFAULT_THICKNESS,
+          (document.getElementById('colorPicker') as HTMLInputElement).value,
+          (document.getElementById('linkLabel') as HTMLInputElement).value || undefined,
+          getCurrentPattern()
+        );
+        addLink(gData, newLink);
         Graph.graphData(gData);
 
         // Mark graph as modified
@@ -958,10 +890,8 @@ document.addEventListener('DOMContentLoaded', () => {
       deleteBtn.style.opacity = '1';
       thicknessInput.addEventListener('input', () => {
         if (selectedLink) {
-          const oldThickness = selectedLink.thickness;
           const newThickness = parseInt(thicknessInput.value) || DEFAULT_THICKNESS;
-          selectedLink.thickness = newThickness;
-          gData.totalLinkThickness += (newThickness - oldThickness);
+          updateLinkThickness(gData, selectedLink, newThickness);
           isGraphModified = true;
           Graph.graphData(gData);
         }
@@ -1269,7 +1199,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const reader = new FileReader();
       reader.onload = (event: ProgressEvent<FileReader>) => {
         try {
-          const graphData = JSON.parse((event.target as FileReader).result as string) as GraphData;
+          const graphData = JSON.parse((event.target as FileReader).result as string) as JsonGraphData;
           processGraphData(graphData);
         } catch (error: unknown) {
           showGraphError('Error loading graph: ' + (error as Error).message);
@@ -1284,98 +1214,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // This function processes the graph data and updates the graph.
   // It is called when the user loads a graph and for the example graph on initialization.
   // Error handling needs to be done by the caller.
-  function processGraphData(graphData: GraphData): void {
-    // Validate the loaded data
-    if (!graphData.nodes || !graphData.links) {
-      throw new Error('Invalid graph data format');
-    }
-
+  function processGraphData(graphData: JsonGraphData): void {
     // Set the graph name if it exists in the metadata
     if (graphData.metadata && graphData.metadata.name) {
       (document.getElementById('graphName') as HTMLInputElement).value = graphData.metadata.name;
     }
 
-    // Check for duplicate node IDs
-    const nodeIds = new Set();
-    let maxNodeId = 0;
-    for (const node of graphData.nodes) {
-      if (nodeIds.has(node.id)) {
-        throw new Error('Error: Duplicate node ID found in graph');
-      }
-      nodeIds.add(node.id);
-      maxNodeId = Math.max(maxNodeId, node.id);
+    // The graphData parameter is in JSON format (source/target as numbers)
+    // Use it directly with loadGraphData
+    const result = loadGraphData(gData, graphData);
+
+    if (!result.success) {
+      throw new Error(result.error || 'Unknown error loading graph');
     }
 
-    // Clear current graph
-    gData.nodes = [];
-    gData.links = [];
-    gData.totalLinks = 0;
-    gData.totalLinkThickness = 0;
-
-    // Load nodes
-    graphData.nodes.forEach((nodeData: Node) => {
-      if (
-        typeof nodeData.id === 'number' &&
-        typeof nodeData.x === 'number' &&
-        typeof nodeData.y === 'number' &&
-        (!nodeData.label || typeof nodeData.label === 'string') &&
-        (!nodeData.color || typeof nodeData.color === 'string') &&
-        (!nodeData.size || typeof nodeData.size === 'number')
-      ) {
-        gData.nodes.push({
-          id: nodeData.id,
-          label: nodeData.label || '',
-          color: nodeData.color || DEFAULT_COLOR,
-          size: nodeData.size || DEFAULT_SIZE,
-          x: nodeData.x,
-          y: nodeData.y,
-          fx: nodeData.x, // Fix the node in its loaded position
-          fy: nodeData.y, // Fix the node in its loaded position
-          exed: !!nodeData.exed,
-          nlinks: 0, // nlinks value is recalculated below
-        });
-      } else {
-        console.warn(`Loaded node (${nodeData.id}) failed type check.`);
-      }
-    });
-
-    // Build a Map for fast node lookup
-    const nodeMap = new Map<number, Node>();
-    gData.nodes.forEach(node => nodeMap.set(node.id, node));
-
-    // Load links, converting source/target IDs to Node objects
-    graphData.links.forEach((linkData: Link) => {
-      // After this point, the numbers will be replaced with Node objects
-      // or else the Link will fail the explicit typechecks below.
-      const source = linkData.source as unknown as number;
-      const target = linkData.target as unknown as number;
-      const sourceNode = nodeMap.get(source);
-      const targetNode = nodeMap.get(target);
-      if (
-        sourceNode &&
-        targetNode &&
-        (!linkData.thickness || typeof linkData.thickness === 'number') &&
-        (!linkData.color || typeof linkData.color === 'string') &&
-        (!linkData.label || typeof linkData.label === 'string') &&
-        (!linkData.dashPattern || isDashPattern(linkData.dashPattern))
-      ) {
-        sourceNode.nlinks++;
-        targetNode.nlinks++;
-        gData.links.push({
-          source: sourceNode,
-          target: targetNode,
-          thickness: linkData.thickness || DEFAULT_THICKNESS,
-          color: linkData.color || DEFAULT_COLOR,
-          ...(linkData.label && { label: linkData.label }),
-          ...(linkData.dashPattern && { dashPattern: linkData.dashPattern }),
-        });
-      } else {
-        console.warn(`Loaded link (${source} -> ${target}) failed type check.`);
-      }
-    });
-
     // Set nextNodeId to max ID + 1
-    nextNodeId = maxNodeId + 1;
+    nextNodeId = (result.maxNodeId ?? 0) + 1;
 
     // Update counters
     gData.totalLinks = gData.links.length;
@@ -1447,10 +1301,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function clearGraph(): void {
     // Clear graph data
-    gData.nodes = [];
-    gData.links = [];
-    gData.totalLinks = 0;
-    gData.totalLinkThickness = 0;
+    clearGraphData(gData);
 
     // Reset state variables
     selectedNode = null;
@@ -1489,7 +1340,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })
     .then(graphData => {
       // Use the existing loadGraph function to process the data
-      processGraphData(graphData as GraphData);
+      processGraphData(graphData as JsonGraphData);
     })
     .catch(error => {
       console.error('Error loading example graph:', error);

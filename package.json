@@ -3,6 +3,7 @@
   "devDependencies": {
     "@types/d3": "^7.4.3",
     "@types/html2canvas": "^0.5.35",
+    "@types/jest": "^30.0.0",
     "@typescript-eslint/eslint-plugin": "^8.37.0",
     "@typescript-eslint/parser": "^8.37.0",
     "esbuild": "^0.25.5",
@@ -10,15 +11,19 @@
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.5.1",
     "globals": "^16.3.0",
+    "jest": "^30.2.0",
     "prettier": "^3.6.2",
+    "ts-jest": "^29.4.4",
     "typescript": "^5.8.3"
   },
   "scripts": {
-    "build": "npx tsc && esbuild graph-editor-script.ts --bundle --minify --sourcemap --outfile=dist/graph-editor-script.js",
-    "lint": "eslint graph-editor-script.ts",
-    "lint:fix": "eslint graph-editor-script.ts --fix",
-    "format": "prettier --write *.ts *.js *.md",
-    "format:check": "prettier --check *.ts *.js *.md"
+    "build": "npx tsc && esbuild src/graph-editor-script.ts --bundle --minify --sourcemap --outfile=dist/graph-editor-script.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/**/*.ts tests/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts tests/**/*.ts --fix",
+    "format": "prettier --write *.js *.md src/**/*.ts tests/**/*.ts",
+    "format:check": "prettier --check *.js *.md src/**/*.ts tests/**/*.ts"
   },
   "dependencies": {
     "d3": "^7.9.0",
