@@ -1098,35 +1098,37 @@ document.addEventListener('DOMContentLoaded', () => {
     html2canvas(graphContainer, {
       useCORS: true,
       allowTaint: true,
-    }).then((canvas: HTMLCanvasElement) => {
-      // Restore the pattern canvases
-      patternCanvases.forEach((canvas: HTMLCanvasElement) => styleOptions.appendChild(canvas));
+    })
+      .then((canvas: HTMLCanvasElement) => {
+        // Restore the pattern canvases
+        patternCanvases.forEach((canvas: HTMLCanvasElement) => styleOptions.appendChild(canvas));
 
-      // Generate date stamp in local time
-      const now = new Date();
-      const dateStamp =
-        now.getFullYear() +
-        String(now.getMonth() + 1).padStart(2, '0') +
-        String(now.getDate()).padStart(2, '0') +
-        'T' +
-        String(now.getHours()).padStart(2, '0') +
-        String(now.getMinutes()).padStart(2, '0') +
-        String(now.getSeconds()).padStart(2, '0');
+        // Generate date stamp in local time
+        const now = new Date();
+        const dateStamp =
+          now.getFullYear() +
+          String(now.getMonth() + 1).padStart(2, '0') +
+          String(now.getDate()).padStart(2, '0') +
+          'T' +
+          String(now.getHours()).padStart(2, '0') +
+          String(now.getMinutes()).padStart(2, '0') +
+          String(now.getSeconds()).padStart(2, '0');
 
-      // Convert canvas to blob
-      canvas.toBlob((blob: Blob | null) => {
-        const url = URL.createObjectURL(blob!);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${graphName}-${dateStamp}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 'image/png');
-    }).catch((error: unknown) => {
-      showGraphError('Error saving graph: ' + (error as Error).message);
-    });
+        // Convert canvas to blob
+        canvas.toBlob((blob: Blob | null) => {
+          const url = URL.createObjectURL(blob!);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${graphName}-${dateStamp}.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 'image/png');
+      })
+      .catch((error: unknown) => {
+        showGraphError('Error saving graph: ' + (error as Error).message);
+      });
   }
 
   function saveGraphAsPdf(graphName: string): void {
@@ -1142,52 +1144,57 @@ document.addEventListener('DOMContentLoaded', () => {
     html2canvas(graphContainer, {
       useCORS: true,
       allowTaint: true,
-    }).then((canvas: HTMLCanvasElement) => {
-      // Restore the pattern canvases
-      patternCanvases.forEach((canvas: HTMLCanvasElement) => styleOptions.appendChild(canvas));
+    })
+      .then((canvas: HTMLCanvasElement) => {
+        // Restore the pattern canvases
+        patternCanvases.forEach((canvas: HTMLCanvasElement) => styleOptions.appendChild(canvas));
 
-      // Generate date stamp in local time
-      const now = new Date();
-      const dateStamp =
-        now.getFullYear() +
-        String(now.getMonth() + 1).padStart(2, '0') +
-        String(now.getDate()).padStart(2, '0') +
-        'T' +
-        String(now.getHours()).padStart(2, '0') +
-        String(now.getMinutes()).padStart(2, '0') +
-        String(now.getSeconds()).padStart(2, '0');
+        // Generate date stamp in local time
+        const now = new Date();
+        const dateStamp =
+          now.getFullYear() +
+          String(now.getMonth() + 1).padStart(2, '0') +
+          String(now.getDate()).padStart(2, '0') +
+          'T' +
+          String(now.getHours()).padStart(2, '0') +
+          String(now.getMinutes()).padStart(2, '0') +
+          String(now.getSeconds()).padStart(2, '0');
 
-      // Create PDF using the imported jsPDF
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'in',
-        format: 'letter',
+        // Create PDF using the imported jsPDF
+        const pdf = new jsPDF({
+          orientation: 'landscape',
+          unit: 'in',
+          format: 'letter',
+        });
+
+        // Calculate dimensions to fit on US Letter landscape with some padding
+        const letterWidth = 11; // US Letter width in inches
+        const letterHeight = 8.5; // US Letter height in inches
+        const padding = 0.4; // padding in inches
+
+        // Calculate scale to fit the canvas on US Letter while maintaining aspect ratio
+        const scale = Math.min(
+          (letterWidth - padding * 2) / canvas.width,
+          (letterHeight - padding * 2) / canvas.height
+        );
+
+        // Calculate dimensions after scaling
+        const scaledWidth = canvas.width * scale;
+        const scaledHeight = canvas.height * scale;
+
+        // Calculate centering offsets
+        const xOffset = (letterWidth - scaledWidth) / 2;
+        const yOffset = (letterHeight - scaledHeight) / 2;
+
+        // Add the image to the PDF with calculated dimensions and position
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', xOffset, yOffset, scaledWidth, scaledHeight);
+
+        // Save the PDF
+        pdf.save(`${graphName}-${dateStamp}.pdf`);
+      })
+      .catch((error: unknown) => {
+        showGraphError('Error saving graph: ' + (error as Error).message);
       });
-
-      // Calculate dimensions to fit on US Letter landscape with some padding
-      const letterWidth = 11; // US Letter width in inches
-      const letterHeight = 8.5; // US Letter height in inches
-      const padding = 0.4; // padding in inches
-
-      // Calculate scale to fit the canvas on US Letter while maintaining aspect ratio
-      const scale = Math.min((letterWidth - padding * 2) / canvas.width, (letterHeight - padding * 2) / canvas.height);
-
-      // Calculate dimensions after scaling
-      const scaledWidth = canvas.width * scale;
-      const scaledHeight = canvas.height * scale;
-
-      // Calculate centering offsets
-      const xOffset = (letterWidth - scaledWidth) / 2;
-      const yOffset = (letterHeight - scaledHeight) / 2;
-
-      // Add the image to the PDF with calculated dimensions and position
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', xOffset, yOffset, scaledWidth, scaledHeight);
-
-      // Save the PDF
-      pdf.save(`${graphName}-${dateStamp}.pdf`);
-    }).catch((error: unknown) => {
-      showGraphError('Error saving graph: ' + (error as Error).message);
-    });
   }
 
   function loadGraph(): void {
