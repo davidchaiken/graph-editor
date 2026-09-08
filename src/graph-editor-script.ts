@@ -145,8 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
     .linkLabel((link: LinkObject) => (link as Link).label || '')
     .linkCanvasObject((linkobj: LinkObject, ctx: CanvasRenderingContext2D, globalScale: number) => {
       const link = linkobj as Link;
-      const source: NodeObject = link.source as NodeObject;
-      const target: NodeObject = link.target as NodeObject;
+      const source: NodeObject = link.source;
+      const target: NodeObject = link.target;
 
       // Draw link
       ctx.beginPath();
@@ -1124,6 +1124,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       }, 'image/png');
+    }).catch((error: unknown) => {
+      showGraphError('Error saving graph: ' + (error as Error).message);
     });
   }
 
@@ -1183,6 +1185,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Save the PDF
       pdf.save(`${graphName}-${dateStamp}.pdf`);
+    }).catch((error: unknown) => {
+      showGraphError('Error saving graph: ' + (error as Error).message);
     });
   }
 

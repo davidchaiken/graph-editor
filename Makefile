@@ -46,3 +46,11 @@ server:
 # Clean rule: remove build artifacts
 clean:
 	rm -rf dist/graph-editor-script.js dist/graph-editor-script.js.map
+
+# Check for outdated packages
+outdated:
+	npm outdated
+
+# Update packages
+update:
+	npm update
